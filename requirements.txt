@@ -1,0 +1,4 @@
+python-telegram-bot==20.7
+nest-asyncio==1.6.0
+backoff==2.2.1
+websockets==12.0
