@@ -8,4 +8,6 @@ requests
 pytelegrambotapi
 pandas
 numpy
+imghdr-py==0.3.1
+
 
