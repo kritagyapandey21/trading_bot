@@ -7,7 +7,6 @@ import json
 import websockets
 import sys
 import os
-import sqlite3
 import hashlib
 import string
 from datetime import datetime, timedelta
@@ -140,45 +139,66 @@ class IndiaTimezone:
 # --- 4. DATABASE LOCK ---
 db_lock = threading.Lock()
 
-# --- 5. LICENSE MANAGEMENT ---
+# --- 5. JSON-BASED LICENSE MANAGEMENT ---
 class LicenseManager:
     def __init__(self):
+        self.data_dir = "data"
+        self.users_file = os.path.join(self.data_dir, "users.json")
+        self.tokens_file = os.path.join(self.data_dir, "tokens.json")
+        self.signals_file = os.path.join(self.data_dir, "signals.json")
+        self.trades_file = os.path.join(self.data_dir, "trades.json")
         self.init_db()
     
-    def get_connection(self):
-        return sqlite3.connect('trading_bot.db', timeout=10.0, check_same_thread=False)
+    def ensure_data_dir(self):
+        """Ensure data directory exists"""
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
+    
+    def load_json(self, filename, default=None):
+        """Load JSON file, return default if file doesn't exist"""
+        self.ensure_data_dir()
+        try:
+            if os.path.exists(filename):
+                with open(filename, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading {filename}: {e}")
+        return default if default is not None else {}
+    
+    def save_json(self, filename, data):
+        """Save data to JSON file"""
+        self.ensure_data_dir()
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            logger.error(f"Error saving {filename}: {e}")
+            return False
     
     def init_db(self):
+        """Initialize JSON database files"""
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
-            
-            c.execute('''CREATE TABLE IF NOT EXISTS users
-                         (user_id INTEGER PRIMARY KEY, username TEXT, license_key TEXT, 
-                          created_at TIMESTAMP, is_active BOOLEAN DEFAULT TRUE)''')
-            
-            c.execute('''CREATE TABLE IF NOT EXISTS access_tokens
-                         (token TEXT PRIMARY KEY, created_by INTEGER, 
-                          created_at TIMESTAMP, is_used BOOLEAN DEFAULT FALSE,
-                          used_by INTEGER DEFAULT NULL, used_at TIMESTAMP DEFAULT NULL)''')
-            
-            c.execute('''CREATE TABLE IF NOT EXISTS trading_signals
-                         (signal_id TEXT PRIMARY KEY, asset TEXT, direction TEXT,
-                          entry_time TEXT, confidence INTEGER, profit_percentage REAL,
-                          score INTEGER, source TEXT, timestamp TEXT)''')
-            
-            c.execute('''CREATE TABLE IF NOT EXISTS active_trades
-                         (trade_id TEXT PRIMARY KEY, user_id INTEGER, asset TEXT, 
-                          direction TEXT, entry_time TEXT, expiry_time TEXT,
-                          signal_data TEXT, created_at TIMESTAMP)''')
-            
+            # Initialize users
+            users = self.load_json(self.users_file, {})
             for admin_id in CONFIG["ADMIN_IDS"]:
-                c.execute("INSERT OR IGNORE INTO users (user_id, username, license_key, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-                         (admin_id, f"Admin{admin_id}", f"ADMIN{admin_id}", IndiaTimezone.now().isoformat(), True))
+                admin_id_str = str(admin_id)
+                if admin_id_str not in users:
+                    users[admin_id_str] = {
+                        'user_id': admin_id,
+                        'username': f"Admin{admin_id}",
+                        'license_key': f"ADMIN{admin_id}",
+                        'created_at': IndiaTimezone.now().isoformat(),
+                        'is_active': True
+                    }
+            self.save_json(self.users_file, users)
             
-            conn.commit()
-            conn.close()
-        print("✅ Database initialized successfully")
+            # Initialize other files with empty data
+            self.save_json(self.tokens_file, {})
+            self.save_json(self.signals_file, {})
+            self.save_json(self.trades_file, {})
+            
+        print("✅ JSON Database initialized successfully")
     
     def generate_license_key(self, user_id, username):
         base_string = f"{user_id}{username}{IndiaTimezone.now().timestamp()}"
@@ -190,55 +210,71 @@ class LicenseManager:
     
     def create_license(self, user_id, username):
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            users = self.load_json(self.users_file, {})
+            user_id_str = str(user_id)
             
             license_key = self.generate_license_key(user_id, username)
-            c.execute("INSERT OR REPLACE INTO users (user_id, username, license_key, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-                     (user_id, username, license_key, IndiaTimezone.now().isoformat(), True))
-            conn.commit()
-            conn.close()
+            users[user_id_str] = {
+                'user_id': user_id,
+                'username': username,
+                'license_key': license_key,
+                'created_at': IndiaTimezone.now().isoformat(),
+                'is_active': True
+            }
             
-        print(f"✅ License created for user {user_id}: {license_key}")
-        return license_key
+            success = self.save_json(self.users_file, users)
+            if success:
+                print(f"✅ License created for user {user_id}: {license_key}")
+                return license_key
+            return None
     
     def create_access_token(self, admin_id):
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            tokens = self.load_json(self.tokens_file, {})
             
             token = self.generate_access_token()
-            c.execute("INSERT INTO access_tokens (token, created_by, created_at) VALUES (?, ?, ?)",
-                     (token, admin_id, IndiaTimezone.now().isoformat()))
-            conn.commit()
-            conn.close()
+            tokens[token] = {
+                'created_by': admin_id,
+                'created_at': IndiaTimezone.now().isoformat(),
+                'is_used': False,
+                'used_by': None,
+                'used_at': None
+            }
             
-        print(f"✅ Access token generated by admin {admin_id}: {token}")
-        return token
+            success = self.save_json(self.tokens_file, tokens)
+            if success:
+                print(f"✅ Access token generated by admin {admin_id}: {token}")
+                return token
+            return None
     
     def use_access_token(self, token, user_id):
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            tokens = self.load_json(self.tokens_file, {})
+            users = self.load_json(self.users_file, {})
+            user_id_str = str(user_id)
             
-            c.execute("SELECT * FROM access_tokens WHERE token = ? AND is_used = FALSE", (token,))
-            token_data = c.fetchone()
-            
-            if token_data:
-                c.execute("UPDATE access_tokens SET is_used = TRUE, used_by = ?, used_at = ? WHERE token = ?",
-                         (user_id, IndiaTimezone.now().isoformat(), token))
+            if token in tokens and not tokens[token]['is_used']:
+                # Mark token as used
+                tokens[token]['is_used'] = True
+                tokens[token]['used_by'] = user_id
+                tokens[token]['used_at'] = IndiaTimezone.now().isoformat()
                 
+                # Create user license
                 username = f"User{user_id}"
                 license_key = self.generate_license_key(user_id, username)
-                c.execute("INSERT OR REPLACE INTO users (user_id, username, license_key, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-                         (user_id, username, license_key, IndiaTimezone.now().isoformat(), True))
+                users[user_id_str] = {
+                    'user_id': user_id,
+                    'username': username,
+                    'license_key': license_key,
+                    'created_at': IndiaTimezone.now().isoformat(),
+                    'is_active': True
+                }
                 
-                conn.commit()
-                conn.close()
-                print(f"✅ Token {token} used by user {user_id}")
-                return license_key
+                # Save both files
+                if self.save_json(self.tokens_file, tokens) and self.save_json(self.users_file, users):
+                    print(f"✅ Token {token} used by user {user_id}")
+                    return license_key
             
-            conn.close()
             print(f"❌ Invalid token attempt: {token} by user {user_id}")
             return None
     
@@ -247,106 +283,101 @@ class LicenseManager:
             return True
             
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
-            c.execute("SELECT * FROM users WHERE user_id = ? AND is_active = TRUE", (user_id,))
-            user = c.fetchone()
-            conn.close()
-            return user is not None
+            users = self.load_json(self.users_file, {})
+            user_id_str = str(user_id)
+            user = users.get(user_id_str)
+            return user is not None and user.get('is_active', False)
     
     def get_user_stats(self):
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            users = self.load_json(self.users_file, {})
+            tokens = self.load_json(self.tokens_file, {})
             
-            c.execute("SELECT COUNT(*) FROM users WHERE is_active = TRUE")
-            active_users = c.fetchone()[0]
+            active_users = sum(1 for user in users.values() if user.get('is_active', False))
+            available_tokens = sum(1 for token in tokens.values() if not token.get('is_used', False))
+            used_tokens = sum(1 for token in tokens.values() if token.get('is_used', False))
             
-            c.execute("SELECT COUNT(*) FROM access_tokens WHERE is_used = FALSE")
-            available_tokens = c.fetchone()[0]
-            
-            c.execute("SELECT COUNT(*) FROM access_tokens WHERE is_used = TRUE")
-            used_tokens = c.fetchone()[0]
-            
-            conn.close()
             return active_users, available_tokens, used_tokens
 
     def get_active_users(self):
         """Get all active users with their details"""
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            users = self.load_json(self.users_file, {})
+            active_users = []
             
-            c.execute("SELECT user_id, username, license_key, created_at FROM users WHERE is_active = TRUE AND user_id NOT IN ({})".format(
-                ','.join('?' * len(CONFIG["ADMIN_IDS"]))
-            ), CONFIG["ADMIN_IDS"])
+            for user_data in users.values():
+                if (user_data.get('is_active', False) and 
+                    user_data.get('user_id') not in CONFIG["ADMIN_IDS"]):
+                    active_users.append({
+                        'user_id': user_data['user_id'],
+                        'username': user_data.get('username', f"User{user_data['user_id']}"),
+                        'license_key': user_data.get('license_key', ''),
+                        'created_at': user_data.get('created_at', '')
+                    })
             
-            users = []
-            for row in c.fetchall():
-                users.append({
-                    'user_id': row[0],
-                    'username': row[1],
-                    'license_key': row[2],
-                    'created_at': row[3]
-                })
-            
-            conn.close()
-            return users
+            return active_users
 
     def deactivate_user(self, user_id):
         """Deactivate a user by user_id"""
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            users = self.load_json(self.users_file, {})
+            user_id_str = str(user_id)
             
-            c.execute("UPDATE users SET is_active = FALSE WHERE user_id = ?", (user_id,))
+            if user_id_str in users:
+                users[user_id_str]['is_active'] = False
+                
+                # Also remove from auto signals
+                if user_id in STATE.auto_signal_users:
+                    STATE.auto_signal_users.discard(user_id)
+                
+                success = self.save_json(self.users_file, users)
+                if success:
+                    print(f"✅ User {user_id} deactivated successfully")
+                    return True
             
-            # Also remove from auto signals
-            if user_id in STATE.auto_signal_users:
-                STATE.auto_signal_users.discard(user_id)
-            
-            success = c.rowcount > 0
-            conn.commit()
-            conn.close()
-            
-            if success:
-                print(f"✅ User {user_id} deactivated successfully")
-            else:
-                print(f"❌ Failed to deactivate user {user_id}")
-            
-            return success
+            print(f"❌ Failed to deactivate user {user_id}")
+            return False
 
     def save_signal(self, signal_data):
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            signals = self.load_json(self.signals_file, {})
+            signal_id = signal_data['trade_id']
             
             timestamp_str = signal_data['timestamp'].isoformat() if hasattr(signal_data['timestamp'], 'isoformat') else str(signal_data['timestamp'])
             
-            c.execute('''INSERT OR REPLACE INTO trading_signals 
-                         (signal_id, asset, direction, entry_time, confidence, profit_percentage, score, source, timestamp)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                     (signal_data['trade_id'], signal_data['asset'], signal_data['direction'],
-                      signal_data['entry_time'], signal_data['confidence'], signal_data.get('profit_percentage', 0),
-                      signal_data['score'], signal_data.get('source', 'TECHNICAL'), timestamp_str))
-            conn.commit()
-            conn.close()
+            signals[signal_id] = {
+                'signal_id': signal_data['trade_id'],
+                'asset': signal_data['asset'],
+                'direction': signal_data['direction'],
+                'entry_time': signal_data['entry_time'],
+                'confidence': signal_data['confidence'],
+                'profit_percentage': signal_data.get('profit_percentage', 0),
+                'score': signal_data['score'],
+                'source': signal_data.get('source', 'TECHNICAL'),
+                'timestamp': timestamp_str
+            }
+            
+            self.save_json(self.signals_file, signals)
 
     def save_active_trade(self, trade_id, user_id, asset, direction, entry_time, signal_data):
         """Save active trade for result tracking"""
         with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
+            trades = self.load_json(self.trades_file, {})
             
             expiry_time = (IndiaTimezone.now() + timedelta(minutes=2)).isoformat()
             
-            c.execute('''INSERT INTO active_trades 
-                         (trade_id, user_id, asset, direction, entry_time, expiry_time, signal_data, created_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                     (trade_id, user_id, asset, direction, entry_time, expiry_time, 
-                      json.dumps(signal_data), IndiaTimezone.now().isoformat()))
-            conn.commit()
-            conn.close()
+            trades[trade_id] = {
+                'trade_id': trade_id,
+                'user_id': user_id,
+                'asset': asset,
+                'direction': direction,
+                'entry_time': entry_time,
+                'expiry_time': expiry_time,
+                'signal_data': signal_data,
+                'created_at': IndiaTimezone.now().isoformat()
+            }
+            
+            self.save_json(self.trades_file, trades)
 
 # --- 6. GLOBAL STATE ---
 class TradingState:
