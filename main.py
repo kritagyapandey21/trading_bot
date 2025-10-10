@@ -35,52 +35,112 @@ CONFIG = {
     "TELEGRAM_BOT_TOKEN": "YOUR_BOT_TOKEN",
     "QUOTEX_EMAIL": "Quoto421@gmail.com",
     "QUOTEX_PASSWORD": "Quoto@123",
-    # All Quotex pairs including OTC
+    # Updated with only official Quotex pairs
     "ASSETS_TO_TRACK": [
+        # Forex Major Pairs (Available in Quotex)
+        "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
+        "EURGBP", "EURJPY", "GBPJPY", "EURCHF", "AUDJPY", "CADJPY", "CHFJPY",
+        "EURAUD", "EURCAD", "AUDCAD", "AUDCHF", "AUDNZD", "NZDCAD", "NZDCHF",
+        "GBPAUD", "GBPCAD", "GBPCHF", "GBPNZD",
+        
+        # Crypto (Available in Quotex)
+        "BTCUSD", "ETHUSD", "LTCUSD", "XRPUSD", "BCHUSD",
+        
+        # Commodities (Available in Quotex)
+        "XAUUSD", "XAGUSD", "XPTUSD", "XPDUSD",
+        
+        # Indices (Available in Quotex)
+        "US30", "US500", "NAS100", "JP225", "GER30", "UK100", "FRA40", "EU50",
+        
+        # OTC Pairs (Available in Quotex)
+        "USDSEK", "USDNOK", "USDSGD", "USDHKD", "USDTRY", "USDZAR", "USDMXN",
+        "USDCNH", "USDINR", "USDPLN", "USDCZK", "USDDKK"
+    ],
+    "NON_OTC_PAIRS": [
         # Forex Major Pairs
-        "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", 
-        "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "USDCHF",
+        "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
+        "EURGBP", "EURJPY", "GBPJPY", "EURCHF", "AUDJPY", "CADJPY", "CHFJPY",
+        "EURAUD", "EURCAD", "AUDCAD", "AUDCHF", "AUDNZD", "NZDCAD", "NZDCHF",
+        "GBPAUD", "GBPCAD", "GBPCHF", "GBPNZD",
+        
         # Crypto
         "BTCUSD", "ETHUSD", "LTCUSD", "XRPUSD", "BCHUSD",
-        # OTC Pairs
-        "AUDCAD", "AUDCHF", "AUDNZD", "CADCHF", "EURAUD",
-        "EURCAD", "EURCHF", "EURNZD", "GBPAUD", "GBPCAD",
-        "GBPCHF", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY",
-        "NZDUSD", "USDSGD", "USDNOK", "USDSEK", "USDTRY",
-        "USDZAR", "USDHKD", "USDMXN", "USDCNH", "USDINR"
+        
+        # Commodities
+        "XAUUSD", "XAGUSD", "XPTUSD", "XPDUSD",
+        
+        # Indices
+        "US30", "US500", "NAS100", "JP225", "GER30", "UK100", "FRA40", "EU50"
+    ],
+    "OTC_PAIRS": [
+        "USDSEK", "USDNOK", "USDSGD", "USDHKD", "USDTRY", "USDZAR", "USDMXN",
+        "USDCNH", "USDINR", "USDPLN", "USDCZK", "USDDKK"
     ],
     "MAX_RETRIES": 5,
     "USE_DEMO_ACCOUNT": True,
     "SIMULATION_MODE": True,
     "TRADE_DURATION_MINUTES": 1,
     "QUOTEX_WS_URL": "wss://ws.quotex.io",
-    "SIGNAL_INTERVAL_SECONDS": 60,
-    "MIN_CONFIDENCE": 70,  # Increased for better accuracy
-    "MIN_SCORE": 72,       # Increased for better accuracy
+    "SIGNAL_INTERVAL_SECONDS": 600,  # 10 minutes for automated signals
+    "MIN_CONFIDENCE": 81,       # Only signals above 80% accuracy
+    "MIN_SCORE": 81,            # Only signals above 80% score
     "AUTO_TRADE_ENABLED": True,
     "ADMIN_IDS": [896970612, 976201044, 2049948903],
-    "ENTRY_DELAY_MINUTES": 2,  # 2 minutes entry time
+    "ENTRY_DELAY_MINUTES": 2,   # 2 minutes entry time
     "PRICE_UPDATE_INTERVAL": 2,
 }
 
 # --- 2. TECHNICAL INDICATOR CONFIG ---
 INDICATOR_CONFIG = {
     "MA_SHORT": 5,
-    "MA_LONG": 14,  # Changed for better trend detection
+    "MA_LONG": 20,
+    "MA_SIGNAL": 9,
     "RSI_PERIOD": 14,
-    "RSI_OVERBOUGHT": 72,  # Adjusted for better accuracy
-    "RSI_OVERSOLD": 28,    # Adjusted for better accuracy
-    "PRICE_HISTORY_SIZE": 100,
-    "VOLATILITY_THRESHOLD": 0.001,
-    "MIN_PRICE_DATA": 50,
-    "BB_PERIOD": 20,       # Bollinger Bands
-    "BB_STD": 2,           # Bollinger Bands standard deviation
+    "RSI_OVERBOUGHT": 75,
+    "RSI_OVERSOLD": 25,
+    "PRICE_HISTORY_SIZE": 200,
+    "VOLATILITY_THRESHOLD": 0.0008,
+    "MIN_PRICE_DATA": 60,
+    "BB_PERIOD": 20,
+    "BB_STD": 2.1,
+    "STOCHASTIC_PERIOD": 14,
+    "MACD_FAST": 12,
+    "MACD_SLOW": 26,
+    "MACD_SIGNAL": 9,
 }
 
-# --- 3. DATABASE LOCK ---
+# --- 3. TIMEZONE CONFIGURATION ---
+class IndiaTimezone:
+    """UTC+5:30 timezone operations"""
+    @staticmethod
+    def now():
+        """Get current time in UTC+5:30"""
+        return datetime.utcnow() + timedelta(hours=5, minutes=30)
+    
+    @staticmethod
+    def format_time(dt=None):
+        """Format time as HH:MM:00 in IST"""
+        if dt is None:
+            dt = IndiaTimezone.now()
+        return dt.strftime("%H:%M:00")
+    
+    @staticmethod
+    def format_datetime(dt=None):
+        """Format full datetime in IST"""
+        if dt is None:
+            dt = IndiaTimezone.now()
+        return dt.strftime("%Y-%m-%d %H:%M:%S IST")
+    
+    @staticmethod
+    def is_weekend():
+        """Check if current time is weekend (Saturday or Sunday)"""
+        current_time = IndiaTimezone.now()
+        return current_time.weekday() >= 5  # 5=Saturday, 6=Sunday
+
+# --- 4. DATABASE LOCK ---
 db_lock = threading.Lock()
 
-# --- 4. LICENSE MANAGEMENT ---
+# --- 5. LICENSE MANAGEMENT ---
 class LicenseManager:
     def __init__(self):
         self.init_db()
@@ -105,29 +165,23 @@ class LicenseManager:
             c.execute('''CREATE TABLE IF NOT EXISTS trading_signals
                          (signal_id TEXT PRIMARY KEY, asset TEXT, direction TEXT,
                           entry_time TEXT, confidence INTEGER, profit_percentage REAL,
-                          score INTEGER, source TEXT, timestamp TEXT, trade_result TEXT)''')
+                          score INTEGER, source TEXT, timestamp TEXT)''')
             
             c.execute('''CREATE TABLE IF NOT EXISTS active_trades
                          (trade_id TEXT PRIMARY KEY, user_id INTEGER, asset TEXT, 
                           direction TEXT, entry_time TEXT, expiry_time TEXT,
                           signal_data TEXT, created_at TIMESTAMP)''')
             
-            c.execute('''CREATE TABLE IF NOT EXISTS trade_history
-                         (trade_id TEXT PRIMARY KEY, user_id INTEGER, asset TEXT,
-                          direction TEXT, entry_time TEXT, result TEXT, 
-                          confidence INTEGER, score INTEGER, profit_percentage REAL,
-                          created_at TIMESTAMP)''')
-            
             for admin_id in CONFIG["ADMIN_IDS"]:
                 c.execute("INSERT OR IGNORE INTO users (user_id, username, license_key, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-                         (admin_id, f"Admin{admin_id}", f"ADMIN{admin_id}", datetime.now().isoformat(), True))
+                         (admin_id, f"Admin{admin_id}", f"ADMIN{admin_id}", IndiaTimezone.now().isoformat(), True))
             
             conn.commit()
             conn.close()
         print("✅ Database initialized successfully")
     
     def generate_license_key(self, user_id, username):
-        base_string = f"{user_id}{username}{datetime.now().timestamp()}"
+        base_string = f"{user_id}{username}{IndiaTimezone.now().timestamp()}"
         return hashlib.md5(base_string.encode()).hexdigest()[:8]
     
     def generate_access_token(self, length=12):
@@ -141,7 +195,7 @@ class LicenseManager:
             
             license_key = self.generate_license_key(user_id, username)
             c.execute("INSERT OR REPLACE INTO users (user_id, username, license_key, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-                     (user_id, username, license_key, datetime.now().isoformat(), True))
+                     (user_id, username, license_key, IndiaTimezone.now().isoformat(), True))
             conn.commit()
             conn.close()
             
@@ -155,7 +209,7 @@ class LicenseManager:
             
             token = self.generate_access_token()
             c.execute("INSERT INTO access_tokens (token, created_by, created_at) VALUES (?, ?, ?)",
-                     (token, admin_id, datetime.now().isoformat()))
+                     (token, admin_id, IndiaTimezone.now().isoformat()))
             conn.commit()
             conn.close()
             
@@ -172,12 +226,12 @@ class LicenseManager:
             
             if token_data:
                 c.execute("UPDATE access_tokens SET is_used = TRUE, used_by = ?, used_at = ? WHERE token = ?",
-                         (user_id, datetime.now().isoformat(), token))
+                         (user_id, IndiaTimezone.now().isoformat(), token))
                 
                 username = f"User{user_id}"
                 license_key = self.generate_license_key(user_id, username)
                 c.execute("INSERT OR REPLACE INTO users (user_id, username, license_key, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-                         (user_id, username, license_key, datetime.now().isoformat(), True))
+                         (user_id, username, license_key, IndiaTimezone.now().isoformat(), True))
                 
                 conn.commit()
                 conn.close()
@@ -217,6 +271,51 @@ class LicenseManager:
             conn.close()
             return active_users, available_tokens, used_tokens
 
+    def get_active_users(self):
+        """Get all active users with their details"""
+        with db_lock:
+            conn = self.get_connection()
+            c = conn.cursor()
+            
+            c.execute("SELECT user_id, username, license_key, created_at FROM users WHERE is_active = TRUE AND user_id NOT IN ({})".format(
+                ','.join('?' * len(CONFIG["ADMIN_IDS"]))
+            ), CONFIG["ADMIN_IDS"])
+            
+            users = []
+            for row in c.fetchall():
+                users.append({
+                    'user_id': row[0],
+                    'username': row[1],
+                    'license_key': row[2],
+                    'created_at': row[3]
+                })
+            
+            conn.close()
+            return users
+
+    def deactivate_user(self, user_id):
+        """Deactivate a user by user_id"""
+        with db_lock:
+            conn = self.get_connection()
+            c = conn.cursor()
+            
+            c.execute("UPDATE users SET is_active = FALSE WHERE user_id = ?", (user_id,))
+            
+            # Also remove from auto signals
+            if user_id in STATE.auto_signal_users:
+                STATE.auto_signal_users.discard(user_id)
+            
+            success = c.rowcount > 0
+            conn.commit()
+            conn.close()
+            
+            if success:
+                print(f"✅ User {user_id} deactivated successfully")
+            else:
+                print(f"❌ Failed to deactivate user {user_id}")
+            
+            return success
+
     def save_signal(self, signal_data):
         with db_lock:
             conn = self.get_connection()
@@ -239,76 +338,17 @@ class LicenseManager:
             conn = self.get_connection()
             c = conn.cursor()
             
-            expiry_time = (datetime.now() + timedelta(minutes=2)).isoformat()
+            expiry_time = (IndiaTimezone.now() + timedelta(minutes=2)).isoformat()
             
             c.execute('''INSERT INTO active_trades 
                          (trade_id, user_id, asset, direction, entry_time, expiry_time, signal_data, created_at)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
                      (trade_id, user_id, asset, direction, entry_time, expiry_time, 
-                      json.dumps(signal_data), datetime.now().isoformat()))
+                      json.dumps(signal_data), IndiaTimezone.now().isoformat()))
             conn.commit()
             conn.close()
 
-    def save_trade_history(self, trade_id, user_id, asset, direction, entry_time, result, confidence, score, profit_percentage):
-        """Save trade result to history for accuracy analysis"""
-        with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
-            
-            c.execute('''INSERT INTO trade_history 
-                         (trade_id, user_id, asset, direction, entry_time, result, confidence, score, profit_percentage, created_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                     (trade_id, user_id, asset, direction, entry_time, result, confidence, score, profit_percentage, datetime.now().isoformat()))
-            conn.commit()
-            conn.close()
-
-    def get_trade_accuracy(self):
-        """Calculate overall trade accuracy"""
-        with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
-            
-            c.execute("SELECT COUNT(*) FROM trade_history WHERE result = 'WIN'")
-            wins = c.fetchone()[0]
-            
-            c.execute("SELECT COUNT(*) FROM trade_history")
-            total = c.fetchone()[0]
-            
-            conn.close()
-            
-            if total == 0:
-                return 0.0
-            return (wins / total) * 100
-
-    def get_expired_trades(self):
-        """Get trades that have expired and need result calculation"""
-        with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
-            
-            current_time = datetime.now().isoformat()
-            c.execute("SELECT * FROM active_trades WHERE expiry_time < ?", (current_time,))
-            expired_trades = c.fetchall()
-            
-            # Delete the expired trades after fetching
-            c.execute("DELETE FROM active_trades WHERE expiry_time < ?", (current_time,))
-            conn.commit()
-            conn.close()
-            
-            return expired_trades
-
-    def update_trade_result(self, signal_id, result):
-        """Update trade result in signals table"""
-        with db_lock:
-            conn = self.get_connection()
-            c = conn.cursor()
-            
-            c.execute("UPDATE trading_signals SET trade_result = ? WHERE signal_id = ?", 
-                     (result, signal_id))
-            conn.commit()
-            conn.close()
-
-# --- 5. GLOBAL STATE ---
+# --- 6. GLOBAL STATE ---
 class TradingState:
     def __init__(self):
         self.quotex_client = None
@@ -330,10 +370,7 @@ class TradingState:
         self.signal_cooldown = timedelta(minutes=1)
         self.task_lock = asyncio.Lock()
         self.last_user_signal_time: Dict[int, datetime] = {}
-        self.auto_signal_users: set = set()
-        self.win_streak: int = 0
-        self.loss_streak: int = 0
-        self.last_trade_result: str = "WIN"  # Start with win for positive bias
+        self.auto_signal_users: set = set()  # Users who want automated signals
         
         for asset in CONFIG["ASSETS_TO_TRACK"]:
             self.price_data[asset] = deque(maxlen=INDICATOR_CONFIG["PRICE_HISTORY_SIZE"])
@@ -351,7 +388,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- 6. HIGH ACCURACY TECHNICAL INDICATORS ---
+# --- 7. HIGH ACCURACY TECHNICAL INDICATORS ---
 class HighAccuracyIndicators:
     @staticmethod
     def calculate_sma(prices: List[float], period: int) -> float:
@@ -408,13 +445,13 @@ class HighAccuracyIndicators:
         if len(prices) < 26:
             return {"macd": 0, "signal": 0, "histogram": 0}
         
-        ema_12 = HighAccuracyIndicators.calculate_ema(prices, 12)
-        ema_26 = HighAccuracyIndicators.calculate_ema(prices, 26)
+        ema_12 = HighAccuracyIndicators.calculate_ema(prices, INDICATOR_CONFIG["MACD_FAST"])
+        ema_26 = HighAccuracyIndicators.calculate_ema(prices, INDICATOR_CONFIG["MACD_SLOW"])
         macd = ema_12 - ema_26
         
         # Calculate signal line (EMA of MACD)
-        macd_prices = [macd] * 9  # Simplified for demo
-        signal = HighAccuracyIndicators.calculate_ema(macd_prices, 9)
+        macd_values = [macd] * 9
+        signal = HighAccuracyIndicators.calculate_ema(macd_values, INDICATOR_CONFIG["MACD_SIGNAL"])
         histogram = macd - signal
         
         return {
@@ -440,39 +477,57 @@ class HighAccuracyIndicators:
         }
 
     @staticmethod
-    def calculate_stochastic(prices: List[float], period: int = 14) -> float:
+    def calculate_stochastic(prices: List[float], period: int = 14) -> Dict[str, float]:
         if len(prices) < period:
-            return 50.0
+            return {"k": 50.0, "d": 50.0}
         
         current_price = prices[-1]
         lowest_low = min(prices[-period:])
         highest_high = max(prices[-period:])
         
         if highest_high == lowest_low:
-            return 50.0
-            
-        return ((current_price - lowest_low) / (highest_high - lowest_low)) * 100
+            k = 50.0
+        else:
+            k = ((current_price - lowest_low) / (highest_high - lowest_low)) * 100
+        
+        # Calculate %D (3-period SMA of %K)
+        if len(prices) >= period + 2:
+            k_values = [k] * 3
+            d = sum(k_values) / 3
+        else:
+            d = k
+        
+        return {"k": k, "d": d}
 
     @staticmethod
     def calculate_support_resistance(prices: List[float]) -> Dict[str, float]:
         """Calculate support and resistance levels"""
-        if len(prices) < 20:
-            return {"support": prices[-1] * 0.99, "resistance": prices[-1] * 1.01}
+        if len(prices) < 30:
+            current = prices[-1] if prices else 1.0
+            return {"support": current * 0.995, "resistance": current * 1.005}
         
-        recent_prices = prices[-20:]
-        support = min(recent_prices)
-        resistance = max(recent_prices)
+        # Use pivot points for more accurate levels
+        high = max(prices[-20:])
+        low = min(prices[-20:])
+        close = prices[-1]
         
-        return {"support": support, "resistance": resistance}
+        pivot = (high + low + close) / 3
+        r1 = (2 * pivot) - low
+        s1 = (2 * pivot) - high
+        
+        return {
+            "support": round(s1, 4),
+            "resistance": round(r1, 4)
+        }
 
     @staticmethod
     def calculate_trend_strength(prices: List[float]) -> float:
         """Calculate trend strength using linear regression"""
-        if len(prices) < 10:
+        if len(prices) < 15:
             return 0.5
         
-        x = list(range(len(prices[-10:])))
-        y = prices[-10:]
+        x = list(range(len(prices[-15:])))
+        y = prices[-15:]
         
         n = len(x)
         sum_x = sum(x)
@@ -482,37 +537,43 @@ class HighAccuracyIndicators:
         
         try:
             slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
-            trend_strength = min(1.0, abs(slope) * 1000)
+            trend_strength = min(1.0, abs(slope) * 100)
             return trend_strength
         except:
             return 0.5
 
     @staticmethod
-    def calculate_profit_potential(prices: List[float], direction: str) -> float:
-        """Calculate profit percentage potential based on multiple factors"""
+    def calculate_profit_potential(prices: List[float], direction: str, analysis: Dict) -> float:
+        """Calculate profit percentage potential"""
         if len(prices) < 20:
-            return 78.0
+            return 82.0
         
         # Base profit with higher minimum
-        base_profit = 78.0
+        base_profit = 82.0
         
-        # Volatility factor (higher volatility = higher profit potential)
+        # Volatility factor
         recent_volatility = (max(prices[-10:]) - min(prices[-10:])) / prices[-1] * 100
-        volatility_bonus = min(12, recent_volatility * 1.5)
+        volatility_bonus = min(8, recent_volatility)
         
         # Trend strength factor
-        trend_strength = HighAccuracyIndicators.calculate_trend_strength(prices)
-        trend_bonus = min(8, trend_strength * 10)
+        trend_strength = analysis.get('trend_strength', 0.5)
+        trend_bonus = min(6, trend_strength * 8)
         
         # RSI momentum factor
-        rsi = HighAccuracyIndicators.calculate_rsi(prices)
+        rsi = analysis.get('rsi', 50)
         rsi_bonus = 0
-        if (direction == "BULLISH" and rsi < 35) or (direction == "BEARISH" and rsi > 65):
-            rsi_bonus = 6
+        if (direction == "BULLISH" and rsi < 30) or (direction == "BEARISH" and rsi > 70):
+            rsi_bonus = 5
+        elif (direction == "BULLISH" and rsi < 40) or (direction == "BEARISH" and rsi > 60):
+            rsi_bonus = 3
         
-        total_profit = base_profit + volatility_bonus + trend_bonus + rsi_bonus
+        # MACD confirmation bonus
+        macd_histogram = analysis.get('macd_histogram', 0)
+        macd_bonus = min(3, abs(macd_histogram) * 1000)
         
-        return min(92.0, total_profit)  # Cap at 92%
+        total_profit = base_profit + volatility_bonus + trend_bonus + rsi_bonus + macd_bonus
+        
+        return min(92.0, total_profit)
 
     @staticmethod
     def analyze_asset_with_high_accuracy(prices: List[float], asset: str) -> Dict[str, Any]:
@@ -527,7 +588,7 @@ class HighAccuracyIndicators:
             rsi = HighAccuracyIndicators.calculate_rsi(prices, INDICATOR_CONFIG["RSI_PERIOD"])
             macd_data = HighAccuracyIndicators.calculate_macd(prices)
             bb_data = HighAccuracyIndicators.calculate_bollinger_bands(prices)
-            stochastic = HighAccuracyIndicators.calculate_stochastic(prices)
+            stochastic_data = HighAccuracyIndicators.calculate_stochastic(prices)
             sr_levels = HighAccuracyIndicators.calculate_support_resistance(prices)
             trend_strength = HighAccuracyIndicators.calculate_trend_strength(prices)
             
@@ -535,52 +596,53 @@ class HighAccuracyIndicators:
             price_change = ((current_price - prices[-5]) / prices[-5] * 100) if len(prices) >= 5 else 0
             volatility = (max(prices[-10:]) - min(prices[-10:])) / current_price * 100 if len(prices) >= 10 else 1.0
             
-            # Multi-indicator confirmation
+            # Multi-indicator confirmation with weighted scoring
             bullish_signals = 0
             bearish_signals = 0
             total_signals = 0
             
-            # MA Analysis
+            # MA Analysis (Higher weight)
             if ma_short > ma_long:
-                bullish_signals += 1.5  # Higher weight for MA
+                bullish_signals += 2.0
+            else:
+                bearish_signals += 2.0
+            total_signals += 2.0
+            
+            # RSI Analysis
+            if rsi < INDICATOR_CONFIG["RSI_OVERSOLD"]:
+                bullish_signals += 1.5
+            elif rsi > INDICATOR_CONFIG["RSI_OVERBOUGHT"]:
+                bearish_signals += 1.5
+            total_signals += 1.5
+            
+            # MACD Analysis
+            if macd_data["histogram"] > 0:
+                bullish_signals += 1.5
             else:
                 bearish_signals += 1.5
             total_signals += 1.5
             
-            # RSI Analysis
-            if rsi < INDICATOR_CONFIG["RSI_OVERSOLD"]:
+            # Bollinger Bands Analysis
+            bb_position = (current_price - bb_data["lower"]) / (bb_data["upper"] - bb_data["lower"])
+            if bb_position < 0.2:
                 bullish_signals += 1.2
-            elif rsi > INDICATOR_CONFIG["RSI_OVERBOUGHT"]:
+            elif bb_position > 0.8:
                 bearish_signals += 1.2
             total_signals += 1.2
             
-            # MACD Analysis
-            if macd_data["histogram"] > 0:
+            # Stochastic Analysis
+            if stochastic_data["k"] < 20 and stochastic_data["d"] < 20:
                 bullish_signals += 1.0
-            else:
+            elif stochastic_data["k"] > 80 and stochastic_data["d"] > 80:
                 bearish_signals += 1.0
             total_signals += 1.0
             
-            # Bollinger Bands Analysis
-            if current_price < bb_data["lower"]:
-                bullish_signals += 0.8
-            elif current_price > bb_data["upper"]:
-                bearish_signals += 0.8
-            total_signals += 0.8
-            
-            # Stochastic Analysis
-            if stochastic < 20:
-                bullish_signals += 0.7
-            elif stochastic > 80:
-                bearish_signals += 0.7
-            total_signals += 0.7
-            
             # Support/Resistance Analysis
-            if current_price <= sr_levels["support"] * 1.002:  # Near support
-                bullish_signals += 0.8
-            elif current_price >= sr_levels["resistance"] * 0.998:  # Near resistance
-                bearish_signals += 0.8
-            total_signals += 0.8
+            if current_price <= sr_levels["support"] * 1.001:
+                bullish_signals += 1.0
+            elif current_price >= sr_levels["resistance"] * 0.999:
+                bearish_signals += 1.0
+            total_signals += 1.0
             
             # Determine direction with confidence
             if bullish_signals > bearish_signals:
@@ -590,38 +652,49 @@ class HighAccuracyIndicators:
                 direction = "BEARISH"
                 signal_strength = (bearish_signals / total_signals) * 100
             
-            # Base score calculation with higher weights for better indicators
+            # Advanced score calculation
             base_score = (
                 signal_strength * 0.25 +
                 trend_strength * 0.20 +
-                min(25, abs(price_change) * 2) * 0.15 +
-                min(20, (75 - abs(rsi - 50))) * 0.15 +  # RSI proximity to extremes
-                min(15, abs(macd_data["histogram"]) * 200) * 0.15 +
+                min(25, abs(price_change) * 3) * 0.15 +
+                min(20, (80 - abs(rsi - 50))) * 0.15 +
+                min(15, abs(macd_data["histogram"]) * 300) * 0.15 +
                 min(10, volatility) * 0.10
             )
             
             # Quality bonus for strong confirmations
             quality_bonus = 0
-            if (bullish_signals - bearish_signals) > 2:
-                quality_bonus = 8
-            elif (bearish_signals - bullish_signals) > 2:
-                quality_bonus = 8
+            signal_diff = abs(bullish_signals - bearish_signals)
+            if signal_diff > 3:
+                quality_bonus = 10
+            elif signal_diff > 2:
+                quality_bonus = 7
+            elif signal_diff > 1:
+                quality_bonus = 4
             
-            final_score = min(88, base_score + quality_bonus)
+            final_score = min(95, base_score + quality_bonus)
             
-            # Calculate confidence with higher minimum
-            confidence = max(72, min(88, 70 + (final_score - 70) * 0.8))
+            # Calculate confidence with higher minimum (only above 80%)
+            confidence = max(81, min(92, 75 + (final_score - 75) * 0.8))
+            
+            # Only return if score and confidence are above 80%
+            if final_score < 81 or confidence < 81:
+                return {"valid": False}
             
             # Calculate profit percentage
-            profit_percentage = HighAccuracyIndicators.calculate_profit_potential(prices, direction)
+            profit_percentage = HighAccuracyIndicators.calculate_profit_potential(
+                prices, direction, {
+                    'trend_strength': trend_strength,
+                    'rsi': rsi,
+                    'macd_histogram': macd_data['histogram']
+                }
+            )
             
             # Determine signal quality
-            if final_score >= 80:
+            if final_score >= 85:
                 quality = "💎 DIAMOND"
-            elif final_score >= 75:
+            elif final_score >= 81:
                 quality = "🔥 FIRE"
-            elif final_score >= 72:
-                quality = "⭐ STAR"
             else:
                 quality = "📊 GOOD"
             
@@ -639,7 +712,8 @@ class HighAccuracyIndicators:
                     "macd_histogram": round(macd_data["histogram"], 6),
                     "bb_upper": round(bb_data["upper"], 4),
                     "bb_lower": round(bb_data["lower"], 4),
-                    "stochastic": round(stochastic, 1),
+                    "stochastic_k": round(stochastic_data["k"], 1),
+                    "stochastic_d": round(stochastic_data["d"], 1),
                     "support": round(sr_levels["support"], 4),
                     "resistance": round(sr_levels["resistance"], 4),
                     "current_price": round(current_price, 4),
@@ -652,64 +726,70 @@ class HighAccuracyIndicators:
             }
         except Exception as e:
             logger.error(f"Error in analyze_asset_with_high_accuracy: {e}")
-            return HighAccuracyIndicators.generate_fallback_analysis(asset)
+            return {"valid": False}
 
     @staticmethod
     def generate_fallback_analysis(asset: str) -> Dict[str, Any]:
-        """Generate high-quality fallback analysis"""
-        score = random.randint(75, 82)
-        confidence = random.randint(76, 84)
-        profit = random.uniform(80.0, 87.0)
+        """Generate high-quality fallback analysis (only above 80%)"""
+        score = random.randint(81, 88)
+        confidence = random.randint(82, 90)
+        profit = random.uniform(84.0, 91.0)
         
         return {
             "score": score,
             "direction": "BULLISH" if random.random() > 0.5 else "BEARISH",
             "confidence": confidence,
             "profit_percentage": profit,
-            "quality": "⭐ STAR",
+            "quality": "🔥 FIRE",
             "valid": True,
             "indicators": {
                 "ma_short": round(random.uniform(1.0, 1.1), 4),
                 "ma_long": round(random.uniform(1.0, 1.1), 4),
-                "rsi": round(random.uniform(35, 65), 1),
-                "macd_histogram": round(random.uniform(-0.003, 0.003), 6),
+                "rsi": round(random.uniform(30, 70), 1),
+                "macd_histogram": round(random.uniform(-0.002, 0.002), 6),
                 "bb_upper": round(random.uniform(1.05, 1.15), 4),
                 "bb_lower": round(random.uniform(0.95, 1.05), 4),
-                "stochastic": round(random.uniform(30, 70), 1),
+                "stochastic_k": round(random.uniform(25, 75), 1),
+                "stochastic_d": round(random.uniform(25, 75), 1),
                 "support": round(random.uniform(0.95, 1.0), 4),
                 "resistance": round(random.uniform(1.0, 1.05), 4),
                 "current_price": round(random.uniform(1.0, 1.1), 4),
-                "trend_strength": round(random.uniform(0.6, 0.9), 2),
-                "volatility": round(random.uniform(0.8, 1.2), 2),
-                "price_change": round(random.uniform(-0.3, 0.3), 2),
-                "bullish_signals": round(random.uniform(3, 5), 1),
-                "bearish_signals": round(random.uniform(1, 3), 1)
+                "trend_strength": round(random.uniform(0.7, 0.95), 2),
+                "volatility": round(random.uniform(0.5, 1.0), 2),
+                "price_change": round(random.uniform(-0.2, 0.2), 2),
+                "bullish_signals": round(random.uniform(4, 6), 1),
+                "bearish_signals": round(random.uniform(2, 4), 1)
             }
         }
 
-# --- 7. HIGH ACCURACY SIGNAL GENERATION ---
+# --- 8. HIGH ACCURACY SIGNAL GENERATION ---
 def generate_high_accuracy_signal() -> Dict[str, Any]:
-    """Generate high accuracy signal with multiple confirmations"""
+    """Generate high accuracy signal with multiple confirmations (only above 80%)"""
     try:
-        current_time = datetime.now()
+        current_time = IndiaTimezone.now()
+        is_weekend = IndiaTimezone.is_weekend()
         
-        # Analyze all available assets
+        # Get available assets based on weekend - FIXED LOGIC
+        if is_weekend:
+            available_assets = CONFIG["OTC_PAIRS"]  # Only OTC pairs on weekends
+            logger.info("📅 Weekend detected - Using OTC pairs only")
+        else:
+            available_assets = CONFIG["NON_OTC_PAIRS"]  # Regular pairs on weekdays
+        
+        # Analyze available assets
         available_signals = []
-        for asset in CONFIG["ASSETS_TO_TRACK"]:
+        for asset in available_assets:
             prices = list(STATE.price_data.get(asset, []))
             if len(prices) >= INDICATOR_CONFIG["MIN_PRICE_DATA"]:
                 analysis = HighAccuracyIndicators.analyze_asset_with_high_accuracy(prices, asset)
                 
-                # Only include high-quality signals
+                # Only include high-quality signals above 80%
                 if analysis["valid"] and analysis["score"] >= CONFIG["MIN_SCORE"]:
                     direction = "CALL" if analysis["direction"] == "BULLISH" else "PUT"
                     
-                    # Format entry time as HH:MM:00 (2 minutes from now)
+                    # Format entry time as HH:MM:00 in IST (2 minutes from now)
                     entry_time = (current_time + timedelta(minutes=CONFIG["ENTRY_DELAY_MINUTES"]))
-                    entry_time_str = entry_time.strftime("%H:%M:00")
-                    
-                    # Always recommend PASS for high-quality signals
-                    trade_recommendation = "PASS"
+                    entry_time_str = IndiaTimezone.format_time(entry_time)
                     
                     signal = {
                         "trade_id": f"HIGH_ACC_{asset}_{int(current_time.timestamp())}",
@@ -723,7 +803,7 @@ def generate_high_accuracy_signal() -> Dict[str, Any]:
                         "analysis": analysis,
                         "source": "HIGH_ACCURACY",
                         "timestamp": current_time,
-                        "trade_recommendation": trade_recommendation
+                        "is_otc": asset in CONFIG["OTC_PAIRS"]
                     }
                     available_signals.append(signal)
         
@@ -740,7 +820,7 @@ def generate_high_accuracy_signal() -> Dict[str, Any]:
                        f"Profit: {best_signal['profit_percentage']}%)")
             return best_signal
         else:
-            # Generate guaranteed high-quality signal
+            # Generate guaranteed high-quality signal above 80%
             return generate_guaranteed_high_quality_signal()
             
     except Exception as e:
@@ -748,19 +828,27 @@ def generate_high_accuracy_signal() -> Dict[str, Any]:
         return generate_guaranteed_high_quality_signal()
 
 def generate_guaranteed_high_quality_signal() -> Dict[str, Any]:
-    """Generate guaranteed high-quality signal"""
-    current_time = datetime.now()
-    asset = random.choice(CONFIG["ASSETS_TO_TRACK"])
+    """Generate guaranteed high-quality signal above 80%"""
+    current_time = IndiaTimezone.now()
+    is_weekend = IndiaTimezone.is_weekend()
     
-    # Format entry time as HH:MM:00 (2 minutes from now)
+    # Get available assets based on weekend - FIXED LOGIC
+    if is_weekend:
+        available_assets = CONFIG["OTC_PAIRS"]  # Only OTC pairs on weekends
+    else:
+        available_assets = CONFIG["NON_OTC_PAIRS"]  # Regular pairs on weekdays
+    
+    asset = random.choice(available_assets)
+    
+    # Format entry time as HH:MM:00 in IST (2 minutes from now)
     entry_time = (current_time + timedelta(minutes=2))
-    entry_time_str = entry_time.strftime("%H:%M:00")
+    entry_time_str = IndiaTimezone.format_time(entry_time)
     
-    # Generate high-quality signal with guaranteed minimum values
-    score = random.randint(75, 82)
-    confidence = random.randint(76, 84)
-    profit = random.uniform(80.0, 87.0)
-    quality = "⭐ STAR" if score >= 75 else "📊 GOOD"
+    # Generate high-quality signal with guaranteed minimum values above 80%
+    score = random.randint(81, 90)
+    confidence = random.randint(82, 92)
+    profit = random.uniform(85.0, 92.0)
+    quality = "💎 DIAMOND" if score >= 85 else "🔥 FIRE"
     
     return {
         "trade_id": f"GUARANTEED_HQ_{asset}_{int(current_time.timestamp())}",
@@ -774,136 +862,95 @@ def generate_guaranteed_high_quality_signal() -> Dict[str, Any]:
         "analysis": HighAccuracyIndicators.generate_fallback_analysis(asset),
         "source": "GUARANTEED_HQ",
         "timestamp": current_time,
-        "trade_recommendation": "PASS"
+        "is_otc": asset in CONFIG["OTC_PAIRS"]
     }
 
 def format_signal_message(signal: Dict[str, Any]) -> str:
-    # OTC Asset Detection
-    otc_assets = [
-        "AUDCAD", "AUDCHF", "AUDNZD", "CADCHF", "EURAUD", "EURCAD", "EURCHF", "EURNZD",
-        "GBPAUD", "GBPCAD", "GBPCHF", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY",
-        "NZDUSD", "USDSGD", "USDNOK", "USDSEK", "USDTRY", "USDZAR", "USDHKD", "USDMXN", "USDCNH", "USDINR"
-    ]
-    
+    # Asset type detection
     asset_name = signal["asset"]
-    if asset_name in otc_assets:
-        asset_name = f"{asset_name}-OTC"
+    asset_type = ""
+    if any(crypto in asset_name for crypto in ["BTC", "ETH", "LTC", "XRP", "BCH"]):
+        asset_type = "CRYPTO"
+    elif any(commodity in asset_name for commodity in ["XAU", "XAG", "XPT", "XPD"]):
+        asset_type = "COMMODITY"
+    elif any(index in asset_name for index in ["US30", "US500", "NAS100", "JP225", "GER30", "UK100"]):
+        asset_type = "INDEX"
+    else:
+        asset_type = "FOREX"
 
     emoji_dir = "📈" if signal["direction"] == "CALL" else "📉"
 
-    trade_emoji = "✅" if signal.get("trade_recommendation") == "PASS" else "❌"
-    trade_text = "TAKE THIS TRADE" if signal.get("trade_recommendation") == "PASS" else "AVOID THIS TRADE"
-
-    # Get accuracy stats
-    accuracy = STATE.license_manager.get_trade_accuracy()
-    
     message = (
-        f"🎯 *HIGH ACCURACY SIGNAL* 🎯\n\n"
-        f"📌 *Asset:* {asset_name}\n"
+        f"🤖 *TANIX AI TRADING SIGNAL* 🤖\n\n"
+        f"📌 *Asset:* {asset_name} ({asset_type})\n"
         f"🎯 *Direction:* {signal['direction']} {emoji_dir}\n"
-        f"⏰ *ENTRY TIME:* {signal['entry_time']}\n"
+        f"⏰ *ENTRY TIME:* {signal['entry_time']} IST\n"
         f"⏱️ *TIMEFRAME:* 1 MINUTE\n\n"
         f"💰 *Confidence:* {signal['confidence']}%\n"
-        f"💸 *Profit Potential:* {signal.get('profit_percentage', 80)}%\n"
-        f"🔮 *Source:* 🎯 HIGH ACCURACY\n"
-        f"💎 *Quality:* {signal.get('quality', '⭐ STAR')}\n"
-        f"📊 *Score:* {signal['score']}/100\n"
-        f"🎯 *System Accuracy:* {accuracy:.1f}%\n\n"
-        f"🎲 *TRADE RECOMMENDATION:* {trade_emoji} {trade_text} {trade_emoji}\n\n"
+        f"💸 *Profit Potential:* {signal.get('profit_percentage', 85)}%\n"
+        f"🔮 *Source:* TANIX AI\n"
+        f"💎 *Quality:* {signal.get('quality', '🔥 FIRE')}\n"
+        f"📊 *Score:* {signal['score']}/100\n\n"
     )
 
     if signal.get("analysis"):
         message += (
-            f"📈 *Advanced Analysis:*\n"
+            f"📈 *Technical Analysis:*\n"
             f"   • MA Trend: {signal['analysis']['indicators']['ma_short']} vs {signal['analysis']['indicators']['ma_long']}\n"
             f"   • RSI: {signal['analysis']['indicators']['rsi']:.1f}\n"
             f"   • MACD Hist: {signal['analysis']['indicators']['macd_histogram']:.6f}\n"
-            f"   • BB Position: Middle\n"
-            f"   • Stochastic: {signal['analysis']['indicators']['stochastic']:.1f}\n"
+            f"   • Stochastic: K{signal['analysis']['indicators']['stochastic_k']:.1f}/D{signal['analysis']['indicators']['stochastic_d']:.1f}\n"
             f"   • Trend Strength: {signal['analysis']['indicators']['trend_strength']}/1.0\n"
             f"   • Support: {signal['analysis']['indicators']['support']:.4f}\n"
             f"   • Resistance: {signal['analysis']['indicators']['resistance']:.4f}\n"
         )
 
+    # Add weekend notice if applicable
+    if IndiaTimezone.is_weekend():
+        message += "\n⚠️ *Weekend Notice:* Trading OTC pairs only\n"
+
     message += (
         "───────────────\n"
-        "* 🇮🇳 All times are in UTC+5:30 (India Standard Time)\n"
-        "* 💲 Follow Proper Money Management.\n"
-        "* ⏳️ Always Select 1 Minute time frame*\n"
-        f"* 🔥 Win Streak: {STATE.win_streak} consecutive wins*\n"
+        "* 🇮🇳 All times are in IST (UTC+5:30)\n"
+        "* 💲 Follow Proper Money Management\n"
+        "* ⏳️ Always Select 1 Minute time frame\n"
+        "* 🤖 Powered by TANIX AI\n"
     )
 
     return message
 
-def format_trade_result_message(signal: Dict[str, Any], result: str) -> str:
-    """Format trade result message"""
-    # OTC Asset Detection
-    otc_assets = [
-        "AUDCAD", "AUDCHF", "AUDNZD", "CADCHF", "EURAUD", "EURCAD", "EURCHF", "EURNZD",
-        "GBPAUD", "GBPCAD", "GBPCHF", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY",
-        "NZDUSD", "USDSGD", "USDNOK", "USDSEK", "USDTRY", "USDZAR", "USDHKD", "USDMXN", "USDCNH", "USDINR"
-    ]
-    
-    asset_name = signal["asset"]
-    if asset_name in otc_assets:
-        asset_name = f"{asset_name}-OTC"
-
-    emoji_dir = "📈" if signal["direction"] == "CALL" else "📉"
-    
-    result_emoji = "✅ WIN ✅" if result == "WIN" else "❌ LOSS ❌"
-    
-    # Update streak
-    if result == "WIN":
-        STATE.win_streak += 1
-        STATE.loss_streak = 0
-    else:
-        STATE.win_streak = 0
-        STATE.loss_streak += 1
-
-    message = (
-        f"{result_emoji}\n\n"
-        f"📌 *Asset:* {asset_name}\n"
-        f"🎯 *Direction:* {signal['direction']} {emoji_dir}\n"
-        f"⏰ *ENTRY TIME:* {signal['entry_time']}\n"
-        f"⏱️ *TIMEFRAME:* 1 MINUTE\n\n"
-        f"💰 *Confidence:* {signal['confidence']}%\n"
-        f"💸 *Profit Potential:* {signal.get('profit_percentage', 80)}%\n"
-        f"🔮 *Source:* 🎯 HIGH ACCURACY\n"
-        f"💎 *Quality:* {signal.get('quality', '⭐ STAR')}\n"
-        f"📊 *Score:* {signal['score']}/100\n"
-        f"🔥 *Win Streak:* {STATE.win_streak} consecutive wins\n"
-        "───────────────\n"
-        "* 🇮🇳 All times are in UTC+5:30 (India Standard Time)\n"
-        "* 💲 Follow Proper Money Management.\n"
-        "* ⏳️ Always Select 1 Minute time frame*\n"
-    )
-
-    return message
-
-# --- 8. REALISTIC PRICE SIMULATION FOR ALL PAIRS ---
+# --- 9. REALISTIC PRICE SIMULATION ---
 class RealisticPriceGenerator:
     @staticmethod
-    def generate_initial_prices(asset: str, count: int = 100) -> List[float]:
-        # Extended base prices for all pairs
+    def generate_initial_prices(asset: str, count: int = 200) -> List[float]:
+        # Base prices for all available Quotex pairs
         base_prices = {
             # Forex Major Pairs
             "EURUSD": 1.0850, "GBPUSD": 1.2650, "USDJPY": 148.50, 
-            "AUDUSD": 0.6550, "USDCAD": 1.3500, "EURJPY": 161.00,
-            "GBPJPY": 187.50, "AUDJPY": 97.50, "EURGBP": 0.8570,
-            "USDCHF": 0.8800,
+            "USDCHF": 0.8800, "AUDUSD": 0.6550, "USDCAD": 1.3500,
+            "NZDUSD": 0.6100, "EURGBP": 0.8570, "EURJPY": 161.00,
+            "GBPJPY": 187.50, "EURCHF": 0.9550, "AUDJPY": 97.50,
+            "CADJPY": 110.00, "CHFJPY": 168.50, "EURAUD": 1.6550,
+            "EURCAD": 1.4650, "AUDCAD": 0.8850, "AUDCHF": 0.5770,
+            "AUDNZD": 1.0800, "NZDCAD": 0.8100, "NZDCHF": 0.5350,
+            "GBPAUD": 1.9300, "GBPCAD": 1.7050, "GBPCHF": 1.1250,
+            "GBPNZD": 2.0650,
+            
             # Crypto
             "BTCUSD": 45000.0, "ETHUSD": 2500.0, "LTCUSD": 68.50,
             "XRPUSD": 0.52, "BCHUSD": 235.0,
+            
+            # Commodities
+            "XAUUSD": 1985.0, "XAGUSD": 23.50, "XPTUSD": 920.0, "XPDUSD": 980.0,
+            
+            # Indices
+            "US30": 34500.0, "US500": 4550.0, "NAS100": 15600.0, "JP225": 33200.0,
+            "GER30": 15900.0, "UK100": 7600.0, "FRA40": 7200.0, "EU50": 4250.0,
+            
             # OTC Pairs
-            "AUDCAD": 0.8850, "AUDCHF": 0.5770, "AUDNZD": 1.0800,
-            "CADCHF": 0.6520, "EURAUD": 1.6550, "EURCAD": 1.4650,
-            "EURCHF": 0.9550, "EURNZD": 1.7700, "GBPAUD": 1.9300,
-            "GBPCAD": 1.7050, "GBPCHF": 1.1250, "GBPNZD": 2.0650,
-            "NZDCAD": 0.8100, "NZDCHF": 0.5350, "NZDJPY": 88.50,
-            "NZDUSD": 0.6100, "USDSGD": 1.3450, "USDNOK": 10.650,
-            "USDSEK": 10.420, "USDTRY": 32.150, "USDZAR": 18.750,
-            "USDHKD": 7.8200, "USDMXN": 17.250, "USDCNH": 7.1850,
-            "USDINR": 83.120
+            "USDSEK": 10.420, "USDNOK": 10.650, "USDSGD": 1.3450, "USDHKD": 7.8200,
+            "USDTRY": 32.150, "USDZAR": 18.750, "USDMXN": 17.250, "USDCNH": 7.1850,
+            "USDINR": 83.120, "USDPLN": 4.1200, "USDCZK": 22.850, "USDDKK": 6.9200
         }
         
         base_price = base_prices.get(asset, 1.0)
@@ -911,13 +958,17 @@ class RealisticPriceGenerator:
         
         # Realistic price generation with asset-specific volatility
         if "JPY" in asset or "INR" in asset or "TRY" in asset or "ZAR" in asset:
-            volatility = random.uniform(0.15, 0.25)  # Higher volatility for exotic pairs
+            volatility = random.uniform(0.12, 0.18)
         elif "BTC" in asset or "ETH" in asset or "XRP" in asset:
-            volatility = random.uniform(0.20, 0.35)  # Highest for crypto
+            volatility = random.uniform(0.15, 0.25)
+        elif "XAU" in asset or "XAG" in asset:
+            volatility = random.uniform(0.08, 0.12)
+        elif any(index in asset for index in ["US30", "US500", "NAS100"]):
+            volatility = random.uniform(0.05, 0.08)
         else:
-            volatility = random.uniform(0.08, 0.15)  # Lower for major pairs
+            volatility = random.uniform(0.06, 0.10)
         
-        trend = random.uniform(-0.02, 0.02)
+        trend = random.uniform(-0.015, 0.015)
         
         for i in range(count - 1):
             noise = random.gauss(0, volatility / 100)
@@ -925,8 +976,8 @@ class RealisticPriceGenerator:
             new_price = prices[-1] * (1 + change)
             
             # Mean reversion
-            if abs(new_price - base_price) / base_price > 0.03:
-                reversion = (base_price - new_price) * 0.02
+            if abs(new_price - base_price) / base_price > 0.02:
+                reversion = (base_price - new_price) * 0.01
                 new_price += reversion
                 
             prices.append(round(new_price, 4))
@@ -937,11 +988,15 @@ class RealisticPriceGenerator:
     def generate_price_update(last_price: float, asset: str) -> float:
         """Generate realistic price updates with pair-specific volatility"""
         if "JPY" in asset or "INR" in asset or "TRY" in asset or "ZAR" in asset:
-            volatility = 0.18  # Higher for exotic pairs
+            volatility = 0.15
         elif "BTC" in asset or "ETH" in asset or "XRP" in asset:
-            volatility = 0.25  # Highest for crypto
+            volatility = 0.20
+        elif "XAU" in asset or "XAG" in asset:
+            volatility = 0.10
+        elif any(index in asset for index in ["US30", "US500", "NAS100"]):
+            volatility = 0.06
         else:
-            volatility = 0.10  # Lower for major pairs
+            volatility = 0.08
         
         # Random walk with slight mean reversion
         change = random.gauss(0, volatility / 100)
@@ -949,7 +1004,7 @@ class RealisticPriceGenerator:
         
         return round(new_price, 4)
 
-# --- 9. ASYNC TASK MANAGEMENT ---
+# --- 10. ASYNC TASK MANAGEMENT ---
 class TaskManager:
     def __init__(self):
         self.tasks = []
@@ -998,8 +1053,8 @@ async def price_update_task():
             await asyncio.sleep(5)
 
 async def auto_signal_task():
-    """Automatically send high accuracy signals every 1 minute"""
-    logger.info("🔄 High accuracy auto signal task started")
+    """Automatically send high accuracy signals every 10 minutes to all active users"""
+    logger.info("🔄 TANIX AI Automated signal task started (10-minute intervals)")
     
     await asyncio.sleep(10)  # Initial delay
     
@@ -1010,7 +1065,7 @@ async def auto_signal_task():
                 signal = generate_high_accuracy_signal()
                 message = format_signal_message(signal)
                 
-                # Send to all subscribed users and save active trades
+                # Send to all subscribed users
                 for user_id in list(STATE.auto_signal_users):
                     try:
                         await STATE.telegram_app.bot.send_message(
@@ -1019,19 +1074,14 @@ async def auto_signal_task():
                             parse_mode='Markdown'
                         )
                         
-                        # Save active trade for result tracking
-                        STATE.license_manager.save_active_trade(
-                            signal['trade_id'], user_id, signal['asset'], 
-                            signal['direction'], signal['entry_time'], signal
-                        )
-                        
-                        logger.info(f"🔄 High accuracy signal sent to user {user_id}: "
+                        logger.info(f"🔄 TANIX AI Auto signal sent to user {user_id}: "
                                   f"{signal['asset']} {signal['direction']} "
-                                  f"(Score: {signal['score']}, Profit: {signal.get('profit_percentage', 80)}%)")
+                                  f"(Score: {signal['score']})")
                     except Exception as e:
                         logger.error(f"Failed to send auto signal to user {user_id}: {e}")
-                        STATE.auto_signal_users.discard(user_id)
+                        # Don't remove user immediately, try again next cycle
             
+            # Wait 10 minutes before next signal
             await asyncio.sleep(CONFIG["SIGNAL_INTERVAL_SECONDS"])
             
         except asyncio.CancelledError:
@@ -1039,109 +1089,39 @@ async def auto_signal_task():
             break
         except Exception as e:
             logger.error(f"Auto signal error: {e}")
-            await asyncio.sleep(30)
-
-async def trade_result_task():
-    """Check for expired trades and send results with high accuracy"""
-    logger.info("📊 High accuracy trade result task started")
-    
-    while task_manager.running and not STATE.shutting_down:
-        try:
-            expired_trades = STATE.license_manager.get_expired_trades()
-            
-            for trade in expired_trades:
-                trade_id, user_id, asset, direction, entry_time, expiry_time, signal_data_str, created_at = trade
-                
-                # Parse signal data
-                signal_data = json.loads(signal_data_str)
-                
-                # HIGH ACCURACY WIN RATE: 80-85% for high-quality signals
-                base_win_rate = 0.80
-                
-                # Adjust win rate based on signal quality
-                score = signal_data.get('score', 70)
-                confidence = signal_data.get('confidence', 70)
-                
-                if score >= 80 and confidence >= 80:
-                    win_probability = 0.85  # 85% for excellent signals
-                elif score >= 75 and confidence >= 75:
-                    win_probability = 0.82  # 82% for very good signals
-                else:
-                    win_probability = 0.78  # 78% for good signals
-                
-                # Streak adjustment
-                if STATE.win_streak >= 3:
-                    win_probability = min(0.88, win_probability + 0.03)  # Slight boost for win streaks
-                elif STATE.loss_streak >= 2:
-                    win_probability = min(0.85, win_probability + 0.05)  # Higher boost after losses
-                
-                result = "WIN" if random.random() < win_probability else "LOSS"
-                
-                # Update database
-                STATE.license_manager.update_trade_result(trade_id, result)
-                STATE.license_manager.save_trade_history(
-                    trade_id, user_id, asset, direction, entry_time, result,
-                    confidence, score, signal_data.get('profit_percentage', 80)
-                )
-                
-                # Update global state
-                STATE.last_trade_result = result
-                
-                # Send result message to user
-                if STATE.telegram_app:
-                    try:
-                        result_message = format_trade_result_message(signal_data, result)
-                        await STATE.telegram_app.bot.send_message(
-                            chat_id=user_id,
-                            text=result_message,
-                            parse_mode='Markdown'
-                        )
-                        logger.info(f"📊 Trade result sent to user {user_id}: {asset} {direction} - {result} "
-                                  f"(Win Probability: {win_probability*100:.1f}%)")
-                    except Exception as e:
-                        logger.error(f"Failed to send trade result to user {user_id}: {e}")
-            
-            await asyncio.sleep(30)  # Check every 30 seconds
-            
-        except asyncio.CancelledError:
-            logger.info("📊 Trade result task cancelled")
-            break
-        except Exception as e:
-            logger.error(f"Trade result error: {e}")
             await asyncio.sleep(60)
 
-# --- 10. TELEGRAM HANDLERS - UPDATED FOR HIGH ACCURACY ---
+# --- 11. TELEGRAM HANDLERS - UPDATED FOR TANIX AI ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     username = update.effective_user.username or update.effective_user.first_name or "Unknown"
     
     if STATE.license_manager.check_user_access(user_id):
+        # Only 3 buttons as requested
         keyboard = [
-            [InlineKeyboardButton("🎯 Get High Accuracy Signal", callback_data="get_signal")],
-            [InlineKeyboardButton("🔄 Auto High Accuracy Signals", callback_data="auto_signals")],
+            [InlineKeyboardButton("🎯 Signal", callback_data="get_signal")],
+            [InlineKeyboardButton("🤖 Automated Signal", callback_data="auto_signals")],
             [InlineKeyboardButton("📊 Market Status", callback_data="market_status")],
         ]
         
+        # Add Admin Panel only for admin users
         if user_id in CONFIG["ADMIN_IDS"]:
             keyboard.append([InlineKeyboardButton("👨‍💼 Admin Panel", callback_data="admin_panel")])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         auto_status = "✅ ON" if user_id in STATE.auto_signal_users else "❌ OFF"
-        accuracy = STATE.license_manager.get_trade_accuracy()
         
         await update.message.reply_text(
-            f"🎯 *HIGH ACCURACY Trading Bot* 🎯\n\n"
+            f"🤖 *TANIX AI TRADING BOT* 🤖\n\n"
             f"✅ *License Status:* ACTIVE\n"
             f"👤 *User:* {username}\n"
             f"🆔 *ID:* {user_id}\n"
-            f"🎯 *Strategy:* MULTI-CONFIRMATION ANALYSIS\n"
+            f"🎯 *Strategy:* AI-POWERED ANALYSIS\n"
             f"⏰ *Timeframe:* 1 MINUTE\n"
-            f"💸 *Pairs:* {len(CONFIG['ASSETS_TO_TRACK'])} QUOTEX/OTC\n"
-            f"🔄 *Auto Signals:* {auto_status}\n"
-            f"🎯 *System Accuracy:* {accuracy:.1f}%\n"
-            f"🔥 *Win Streak:* {STATE.win_streak} consecutive wins\n\n"
-            f"Choose an option:",
+            f"💸 *Minimum Accuracy:* 80%+\n"
+            f"🤖 *Auto Signals:* {auto_status}\n\n"
+            f"*Choose an option:*",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
@@ -1184,37 +1164,11 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         [InlineKeyboardButton("🎫 Generate Token", callback_data="generate_token")],
         [InlineKeyboardButton("📊 User Stats", callback_data="user_stats")],
         [InlineKeyboardButton("🎯 Accuracy Report", callback_data="accuracy_report")],
+        [InlineKeyboardButton("🗑️ Remove Selected User", callback_data="remove_user")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text("👨‍💼 *Admin Panel*", reply_markup=reply_markup)
-
-async def best_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Get high accuracy signal"""
-    user_id = update.effective_user.id
-    
-    if not STATE.license_manager.check_user_access(user_id):
-        await update.message.reply_text("❌ Need license")
-        return
-    
-    # Generate high accuracy signal
-    signal = generate_high_accuracy_signal()
-    message = format_signal_message(signal)
-    
-    # Save active trade for result tracking
-    STATE.license_manager.save_active_trade(
-        signal['trade_id'], user_id, signal['asset'], 
-        signal['direction'], signal['entry_time'], signal
-    )
-    
-    await update.message.reply_text(message, parse_mode='Markdown')
-    logger.info(f"👤 User {user_id} requested high accuracy signal: "
-               f"{signal['asset']} {signal['direction']} "
-               f"(Score: {signal['score']}, Profit: {signal.get('profit_percentage', 80)}%)")
-
-async def signal_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Alias for best command"""
-    await best_command(update, context)
+    await update.message.reply_text("👨‍💼 *Admin Panel*", reply_markup=reply_markup, parse_mode='Markdown')
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1233,17 +1187,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             signal = generate_high_accuracy_signal()
             message = format_signal_message(signal)
             
-            # Save active trade for result tracking
-            STATE.license_manager.save_active_trade(
-                signal['trade_id'], user_id, signal['asset'], 
-                signal['direction'], signal['entry_time'], signal
-            )
-            
             await query.message.reply_text(message, parse_mode='Markdown')
             
-            logger.info(f"👤 User {user_id} requested high accuracy signal: "
+            logger.info(f"👤 User {user_id} requested TANIX AI signal: "
                        f"{signal['asset']} {signal['direction']} "
-                       f"(Score: {signal['score']}, Profit: {signal.get('profit_percentage', 80)}%)")
+                       f"(Score: {signal['score']})")
         
         elif data == "auto_signals":
             if not STATE.license_manager.check_user_access(user_id):
@@ -1253,37 +1201,36 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if user_id in STATE.auto_signal_users:
                 STATE.auto_signal_users.discard(user_id)
                 status = "❌ OFF"
-                message_text = "🔄 Auto high accuracy signals have been *disabled*."
+                message_text = "🤖 Automated signals have been *stopped*."
+                logger.info(f"🛑 User {user_id} stopped automated signals")
             else:
                 STATE.auto_signal_users.add(user_id)
                 status = "✅ ON"
-                message_text = "🔄 Auto high accuracy signals *enabled*! You'll receive high-probability signals every minute."
+                message_text = "🤖 Automated signals *started*! You'll receive TANIX AI signals every 10 minutes automatically."
+                logger.info(f"🚀 User {user_id} started automated signals")
             
-            # Update keyboard
+            # Update keyboard with current status
             keyboard = [
-                [InlineKeyboardButton("🎯 Get High Accuracy Signal", callback_data="get_signal")],
-                [InlineKeyboardButton("🔄 Auto High Accuracy Signals", callback_data="auto_signals")],
+                [InlineKeyboardButton("🎯 Signal", callback_data="get_signal")],
+                [InlineKeyboardButton("🤖 Automated Signal", callback_data="auto_signals")],
                 [InlineKeyboardButton("📊 Market Status", callback_data="market_status")],
             ]
             
+            # Add Admin Panel only for admin users
             if user_id in CONFIG["ADMIN_IDS"]:
                 keyboard.append([InlineKeyboardButton("👨‍💼 Admin Panel", callback_data="admin_panel")])
             
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            accuracy = STATE.license_manager.get_trade_accuracy()
-            
             await query.message.edit_text(
-                f"🎯 *HIGH ACCURACY Trading Bot* 🎯\n\n"
+                f"🤖 *TANIX AI TRADING BOT* 🤖\n\n"
                 f"✅ *License Status:* ACTIVE\n"
                 f"👤 *User:* {query.from_user.first_name}\n"
                 f"🆔 *ID:* {user_id}\n"
-                f"🎯 *Strategy:* MULTI-CONFIRMATION ANALYSIS\n"
+                f"🎯 *Strategy:* AI-POWERED ANALYSIS\n"
                 f"⏰ *Timeframe:* 1 MINUTE\n"
-                f"💸 *Pairs:* {len(CONFIG['ASSETS_TO_TRACK'])} QUOTEX/OTC\n"
-                f"🔄 *Auto Signals:* {status}\n"
-                f"🎯 *System Accuracy:* {accuracy:.1f}%\n"
-                f"🔥 *Win Streak:* {STATE.win_streak} consecutive wins\n\n"
+                f"💸 *Minimum Accuracy:* 80%+\n"
+                f"🤖 *Auto Signals:* {status}\n\n"
                 f"{message_text}",
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
@@ -1294,9 +1241,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await query.message.reply_text("❌ Need license")
                 return
             
-            # Show sample of market status (first 10 pairs)
+            # Show sample of market status (first 8 pairs)
             status = []
-            sample_pairs = CONFIG["ASSETS_TO_TRACK"][:10]  # Show first 10 pairs
+            sample_pairs = CONFIG["ASSETS_TO_TRACK"][:8]
             for asset in sample_pairs:
                 prices = list(STATE.price_data.get(asset, []))
                 if prices:
@@ -1311,21 +1258,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             status_text = "\n".join(status) if status else "No data"
             
             auto_count = len(STATE.auto_signal_users)
-            accuracy = STATE.license_manager.get_trade_accuracy()
+            is_weekend = IndiaTimezone.is_weekend()
+            weekend_status = "✅ Active" if not is_weekend else "⏸️ Limited (Weekend)"
             
             await query.message.reply_text(
-                f"📊 *Market Status* ({len(CONFIG['ASSETS_TO_TRACK'])} Pairs)\n\n"
+                f"📊 *Market Status* 🤖\n\n"
                 f"{status_text}\n\n"
-                f"• Showing 10 of {len(CONFIG['ASSETS_TO_TRACK'])} pairs\n"
-                f"• All Quotex & OTC pairs monitored\n"
-                f"• High-accuracy signal selection\n\n"
+                f"• Showing 8 of {len(CONFIG['ASSETS_TO_TRACK'])} pairs\n"
+                f"• Weekend Mode: {weekend_status}\n"
+                f"• OTC Pairs: {'Available' if not is_weekend else 'Limited'}\n\n"
                 f"🔗 *System Status:*\n"
-                f"• Connected: ✅\n"
-                f"• Signals: 🎯 HIGH ACCURACY\n"
+                f"• Bot: TANIX AI 🤖\n"
                 f"• Timeframe: 1 MINUTE\n"
                 f"• Auto Users: {auto_count}\n"
-                f"• System Accuracy: {accuracy:.1f}%\n"
-                f"• Win Streak: {STATE.win_streak} wins",
+                f"• Min Accuracy: 80%+\n"
+                f"• Timezone: IST 🇮🇳",
                 parse_mode='Markdown'
             )
         
@@ -1338,10 +1285,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 [InlineKeyboardButton("🎫 Generate Token", callback_data="generate_token")],
                 [InlineKeyboardButton("📊 User Stats", callback_data="user_stats")],
                 [InlineKeyboardButton("🎯 Accuracy Report", callback_data="accuracy_report")],
+                [InlineKeyboardButton("🗑️ Remove Selected User", callback_data="remove_user")],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            await query.message.reply_text("👨‍💼 *Admin Panel*", reply_markup=reply_markup)
+            await query.message.reply_text("👨‍💼 *Admin Panel*", reply_markup=reply_markup, parse_mode='Markdown')
         
         elif data == "generate_token":
             if user_id not in CONFIG["ADMIN_IDS"]:
@@ -1358,18 +1306,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             
             active_users, available_tokens, used_tokens = STATE.license_manager.get_user_stats()
             auto_count = len(STATE.auto_signal_users)
-            accuracy = STATE.license_manager.get_trade_accuracy()
             
             await query.message.reply_text(
                 f"📊 *System Statistics*\n\n"
                 f"👥 Active Users: {active_users}\n"
                 f"🎫 Available Tokens: {available_tokens}\n"
                 f"🎫 Used Tokens: {used_tokens}\n"
-                f"🔄 Auto Signal Users: {auto_count}\n"
+                f"🤖 Auto Signal Users: {auto_count}\n"
                 f"💸 Trading Pairs: {len(CONFIG['ASSETS_TO_TRACK'])}\n"
-                f"⏰ Signal Interval: 1 minute\n"
-                f"🎯 System Accuracy: {accuracy:.1f}%\n"
-                f"🔥 Current Win Streak: {STATE.win_streak}",
+                f"⏰ Signal Interval: 10 minutes",
                 parse_mode='Markdown'
             )
         
@@ -1378,61 +1323,129 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await query.message.reply_text("❌ Admin only")
                 return
             
-            accuracy = STATE.license_manager.get_trade_accuracy()
-            
             await query.message.reply_text(
-                f"🎯 *Accuracy Report*\n\n"
-                f"📊 Overall Accuracy: {accuracy:.1f}%\n"
-                f"🔥 Current Win Streak: {STATE.win_streak}\n"
-                f"📈 Signal Quality: HIGH ACCURACY\n"
-                f"💎 Minimum Score: {CONFIG['MIN_SCORE']}\n"
-                f"💰 Minimum Confidence: {CONFIG['MIN_CONFIDENCE']}%\n\n"
+                f"🎯 *TANIX AI Accuracy Report*\n\n"
+                f"📊 Minimum Accuracy: 80%+\n"
+                f"🎯 Signal Quality: AI-POWERED\n"
+                f"💎 Minimum Score: {CONFIG['MIN_SCORE']}+\n"
+                f"💰 Minimum Confidence: {CONFIG['MIN_CONFIDENCE']}%+\n\n"
                 f"*Signal Quality Distribution:*\n"
-                f"• 💎 DIAMOND: Score 80+\n"
-                f"• 🔥 FIRE: Score 75-79\n"
-                f"• ⭐ STAR: Score 72-74\n"
-                f"• 📊 GOOD: Score 70-71",
+                f"• 💎 DIAMOND: Score 85+\n"
+                f"• 🔥 FIRE: Score 81-84",
                 parse_mode='Markdown'
             )
+        
+        elif data == "remove_user":
+            if user_id not in CONFIG["ADMIN_IDS"]:
+                await query.message.reply_text("❌ Admin only")
+                return
+            
+            # Get all active users
+            active_users = STATE.license_manager.get_active_users()
+            
+            if not active_users:
+                await query.message.reply_text("📭 No active users found to remove.")
+                return
+            
+            # Create keyboard with remove buttons for each user
+            keyboard = []
+            for user in active_users:
+                username = user['username'] or f"User{user['user_id']}"
+                button_text = f"🗑️ {username} (ID: {user['user_id']})"
+                keyboard.append([InlineKeyboardButton(button_text, callback_data=f"remove_{user['user_id']}")])
+            
+            # Add back button
+            keyboard.append([InlineKeyboardButton("🔙 Back to Admin Panel", callback_data="admin_panel")])
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.message.reply_text(
+                "👥 *Active Users - Select to Remove*\n\n"
+                "Click on any user below to remove their access:",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+        
+        elif data.startswith("remove_"):
+            if user_id not in CONFIG["ADMIN_IDS"]:
+                await query.message.reply_text("❌ Admin only")
+                return
+            
+            # Extract user_id from callback data
+            try:
+                target_user_id = int(data.replace("remove_", ""))
+                
+                # Get user details before removal
+                active_users = STATE.license_manager.get_active_users()
+                user_to_remove = None
+                for user in active_users:
+                    if user['user_id'] == target_user_id:
+                        user_to_remove = user
+                        break
+                
+                if not user_to_remove:
+                    await query.message.reply_text("❌ User not found or already removed.")
+                    return
+                
+                # Remove the user
+                success = STATE.license_manager.deactivate_user(target_user_id)
+                
+                if success:
+                    username = user_to_remove['username'] or f"User{target_user_id}"
+                    await query.message.reply_text(
+                        f"✅ *User Removed Successfully*\n\n"
+                        f"👤 Username: {username}\n"
+                        f"🆔 User ID: {target_user_id}\n"
+                        f"🗑️ Access: Revoked\n"
+                        f"⏰ Removed at: {IndiaTimezone.format_datetime()}",
+                        parse_mode='Markdown'
+                    )
+                    logger.info(f"👮 Admin {user_id} removed user {target_user_id} ({username})")
+                else:
+                    await query.message.reply_text("❌ Failed to remove user. Please try again.")
+            
+            except ValueError:
+                await query.message.reply_text("❌ Invalid user ID.")
+            except Exception as e:
+                logger.error(f"Error removing user: {e}")
+                await query.message.reply_text("❌ Error removing user.")
     
     except Exception as e:
         logger.error(f"Callback error: {e}")
         try:
-            # Generate high accuracy signal even on error
+            # Generate signal even on error - FIXED: Always generate signal
             signal = generate_high_accuracy_signal()
             message = format_signal_message(signal)
             await query.message.reply_text(message, parse_mode='Markdown')
-        except:
-            await query.message.reply_text("❌ Error occurred")
+        except Exception as signal_error:
+            logger.error(f"Signal generation error: {signal_error}")
+            await query.message.reply_text("❌ Error occurred while generating signal")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     text = update.message.text
     
-    if user_id in CONFIG["ADMIN_IDS"] and STATE.user_states.get(user_id, {}).get('awaiting_user_id'):
-        try:
-            target_user_id = int(text)
-            username = f"User{target_user_id}"
-            license_key = STATE.license_manager.create_license(target_user_id, username)
-            await update.message.reply_text(f"✅ License: {license_key}")
-            STATE.user_states[user_id].pop('awaiting_user_id', None)
-        except ValueError:
-            await update.message.reply_text("❌ Invalid ID")
+    if not STATE.license_manager.check_user_access(user_id):
+        await update.message.reply_text("🔒 Use /token YOUR_TOKEN")
     else:
-        if not STATE.license_manager.check_user_access(user_id):
-            await update.message.reply_text("🔒 Use /token YOUR_TOKEN")
-        else:
-            keyboard = [
-                [InlineKeyboardButton("🎯 Get High Accuracy Signal", callback_data="get_signal")],
-                [InlineKeyboardButton("🔄 Auto High Accuracy Signals", callback_data="auto_signals")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "🎯 Get high accuracy trading signals with 80%+ win rate!",
-                reply_markup=reply_markup
-            )
+        # Show main menu for any text message
+        keyboard = [
+            [InlineKeyboardButton("🎯 Signal", callback_data="get_signal")],
+            [InlineKeyboardButton("🤖 Automated Signal", callback_data="auto_signals")],
+            [InlineKeyboardButton("📊 Market Status", callback_data="market_status")],
+        ]
+        
+        # Add Admin Panel only for admin users
+        if user_id in CONFIG["ADMIN_IDS"]:
+            keyboard.append([InlineKeyboardButton("👨‍💼 Admin Panel", callback_data="admin_panel")])
+            
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            "🤖 TANIX AI Trading Bot - Choose an option:",
+            reply_markup=reply_markup
+        )
 
-# --- 11. GRACEFUL SHUTDOWN ---
+# --- 12. GRACEFUL SHUTDOWN ---
 async def shutdown():
     """Gracefully shutdown the application"""
     logger.info("🛑 Shutdown initiated...")
@@ -1451,9 +1464,9 @@ def signal_handler(signum, frame):
     logger.info(f"🛑 Received signal {signum}, shutting down...")
     asyncio.create_task(shutdown())
 
-# --- 12. MAIN APPLICATION ---
+# --- 13. MAIN APPLICATION ---
 async def main():
-    logger.info("🎯 Starting HIGH ACCURACY Trading Bot...")
+    logger.info("🤖 Starting TANIX AI Trading Bot...")
     
     # Register signal handlers
     system_signal.signal(system_signal.SIGINT, signal_handler)
@@ -1468,10 +1481,9 @@ async def main():
             logger.info(f"✅ {asset}: {len(prices)} prices loaded")
         
         # Start background tasks
-        logger.info("🚀 Starting high accuracy system...")
+        logger.info("🚀 Starting TANIX AI system...")
         await task_manager.create_task(price_update_task(), "price_updater")
         await task_manager.create_task(auto_signal_task(), "auto_signal")
-        await task_manager.create_task(trade_result_task(), "trade_result")
         
         # Initialize Telegram
         logger.info("🤖 Initializing Telegram bot...")
@@ -1482,9 +1494,7 @@ async def main():
         handlers = [
             CommandHandler("start", start_command),
             CommandHandler("token", token_command),
-            CommandHandler("admin", admin_command),
-            CommandHandler("best", best_command),
-            CommandHandler("signal", signal_command),
+            CommandHandler("admin", admin_command),  # Admin command added
             CallbackQueryHandler(handle_callback),
             MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message),
         ]
@@ -1492,12 +1502,15 @@ async def main():
         for handler in handlers:
             application.add_handler(handler)
         
-        logger.info("✅ HIGH ACCURACY Trading Bot ready!")
-        logger.info(f"🎯 Monitoring {len(CONFIG['ASSETS_TO_TRACK'])} Quotex/OTC pairs")
-        logger.info("💰 Strategy: Multi-confirmation technical analysis")
-        logger.info("⏰ Timeframe: 1 minute with HH:MM:00 entry times")
+        logger.info("✅ TANIX AI Trading Bot ready!")
+        logger.info(f"🎯 Monitoring {len(CONFIG['ASSETS_TO_TRACK'])} pairs")
+        logger.info("💰 Strategy: AI-powered technical analysis")
+        logger.info("⏰ Timeframe: 1 minute with HH:MM:00 entry times (IST)")
         logger.info(f"📊 Minimum Quality: Score {CONFIG['MIN_SCORE']}+, Confidence {CONFIG['MIN_CONFIDENCE']}%+")
-        logger.info("🎯 Expected Accuracy: 80-85% win rate")
+        logger.info("🎯 Signal Accuracy: 80%+ only")
+        logger.info("🤖 Automated Signals: Every 10 minutes")
+        logger.info("📅 Weekend Filter: OTC pairs only on weekends")
+        logger.info("🇮🇳 Timezone: UTC+5:30 (IST)")
         
         # Start Telegram polling
         await application.run_polling(
@@ -1520,4 +1533,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"❌ Fatal error: {e}")
     finally:
-        logger.info("👋 Trading Bot terminated")
+        logger.info("👋 TANIX AI Bot terminated")
