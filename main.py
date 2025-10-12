@@ -340,20 +340,64 @@ class LicenseManager:
         with db_lock:
             trades = self.load_json(self.trades_file, {})
             
-            expiry_time = (IndiaTimezone.now() + timedelta(minutes=2)).isoformat()
-            
+            # The trade duration is 1 minute, so expiry is entry_time + 1 minute
+            expiry_time = (IndiaTimezone.now() + timedelta(minutes=CONFIG["TRADE_DURATION_MINUTES"] + CONFIG["ENTRY_DELAY_MINUTES"])).isoformat()
+
+            # Find the simplified asset name for price lookup
+            simple_asset = asset.split(' ')[0]
+            current_price = list(STATE.price_data.get(simple_asset, []))[-1] if STATE.price_data.get(simple_asset) else 0.0
+
             trades[trade_id] = {
                 'trade_id': trade_id,
                 'user_id': user_id,
-                'asset': asset,
+                'asset': simple_asset, # Use simple asset name for price lookup
                 'direction': direction,
                 'entry_time': entry_time,
                 'expiry_time': expiry_time,
+                'entry_price': current_price, # Save entry price for result simulation
                 'signal_data': signal_data,
-                'created_at': IndiaTimezone.now().isoformat()
+                'created_at': IndiaTimezone.now().isoformat(),
+                'message_id': None # To be updated after sending message
             }
             
             self.save_json(self.trades_file, trades)
+            return trade_id
+
+    def get_and_remove_expired_trades(self) -> List[Dict[str, Any]]:
+        """Get all trades that have passed their expiry time and remove them from the file"""
+        expired_trades = []
+        now = IndiaTimezone.now()
+        
+        with db_lock:
+            trades = self.load_json(self.trades_file, {})
+            trades_to_keep = {}
+            
+            for trade_id, trade_data in trades.items():
+                # Correct handling for ISO format which may not contain ' IST'
+                expiry_time_str = trade_data['expiry_time'].replace(' IST', '')
+                try:
+                    expiry_dt = datetime.fromisoformat(expiry_time_str)
+                except ValueError:
+                    # Fallback for improperly saved older entries if any
+                    expiry_dt = now - timedelta(minutes=1) # Treat as expired if parsing fails
+                
+                if expiry_dt < now:
+                    expired_trades.append(trade_data)
+                else:
+                    trades_to_keep[trade_id] = trade_data
+            
+            self.save_json(self.trades_file, trades_to_keep)
+        
+        return expired_trades
+    
+    def update_trade_message_id(self, trade_id, message_id):
+        """Update the message ID for a trade"""
+        with db_lock:
+            trades = self.load_json(self.trades_file, {})
+            if trade_id in trades:
+                trades[trade_id]['message_id'] = message_id
+                self.save_json(self.trades_file, trades)
+
 
 # --- 6. GLOBAL STATE ---
 class TradingState:
@@ -741,6 +785,40 @@ class HighAccuracyIndicators:
             }
         }
 
+    @staticmethod
+    def determine_simulated_result(trade_data: Dict[str, Any], price_data: Dict[str, deque]) -> str:
+        """Simulate the trade result based on entry price and current price history."""
+        
+        asset = trade_data['asset']
+        direction = trade_data['direction']
+        entry_price = trade_data['entry_price']
+        
+        prices = list(price_data.get(asset, []))
+        
+        if not prices or entry_price == 0.0:
+            logger.warning(f"Simulated result: No price data or entry price for {asset}")
+            return "⚖️ MTG" # Default to tie if data is missing
+        
+        # The expiry time is 1 minute after entry. We check the latest price.
+        # Since price updates are every 2 seconds, the deque contains recent prices.
+        # We'll use the final price in the current deque as the 'closing price' for simulation.
+        closing_price = prices[-1]
+        
+        # Define a small tolerance for a tie (e.g., 0.0001% change)
+        tolerance = entry_price * 0.000001 
+        
+        price_diff = closing_price - entry_price
+        
+        if abs(price_diff) <= tolerance:
+            return "⚖️ MTG" # Tie
+        
+        if direction == "CALL":
+            return "✅ WIN" if closing_price > entry_price else "❌ LOSE"
+        elif direction == "PUT":
+            return "✅ WIN" if closing_price < entry_price else "❌ LOSE"
+        
+        return "⚖️ MTG"
+
 # --- 8. HIGH ACCURACY SIGNAL GENERATION ---
 def generate_high_accuracy_signal() -> Dict[str, Any]:
     try:
@@ -940,10 +1018,6 @@ class RealisticPriceGenerator:
         
         return round(new_price, 4)
 
-# [Rest of the code remains the same - TaskManager, background tasks, Telegram handlers, etc.]
-# Note: The rest of the code (TaskManager, background tasks, Telegram handlers) 
-# remains unchanged from the previous version since it's already compatible.
-
 # --- 10. ASYNC TASK MANAGEMENT ---
 class TaskManager:
     def __init__(self):
@@ -1006,11 +1080,26 @@ async def auto_signal_task():
                 
                 for user_id in list(STATE.auto_signal_users):
                     try:
-                        await STATE.telegram_app.bot.send_message(
+                        message_sent = await STATE.telegram_app.bot.send_message(
                             chat_id=user_id,
                             text=message,
                             parse_mode='Markdown'
                         )
+                        # Save active trade for result tracking
+                        # --- FIX: Ensure signal_data is JSON serializable ---
+                        serializable_signal = signal.copy()
+                        serializable_signal['timestamp'] = serializable_signal['timestamp'].isoformat()
+                        # ---------------------------------------------------
+                        
+                        STATE.license_manager.save_active_trade(
+                            trade_id=signal['trade_id'], 
+                            user_id=user_id, 
+                            asset=signal['asset'], 
+                            direction=signal['direction'], 
+                            entry_time=signal['entry_time'], 
+                            signal_data=serializable_signal # Use serializable version
+                        )
+                        STATE.license_manager.update_trade_message_id(signal['trade_id'], message_sent.message_id)
                         
                         logger.info(f"🔄 TANIX AI Auto signal sent to user {user_id}: "
                                   f"{signal['asset']} {signal['direction']} "
@@ -1026,6 +1115,54 @@ async def auto_signal_task():
         except Exception as e:
             logger.error(f"Auto signal error: {e}")
             await asyncio.sleep(60)
+
+async def trade_result_task():
+    """Task to check for expired trades and post their simulated results."""
+    logger.info("⏱️ Trade result tracking task started.")
+    
+    await asyncio.sleep(CONFIG["ENTRY_DELAY_MINUTES"] * 60 + CONFIG["TRADE_DURATION_MINUTES"] * 60) # Initial delay to allow first trades to expire
+    
+    while task_manager.running and not STATE.shutting_down:
+        try:
+            expired_trades = STATE.license_manager.get_and_remove_expired_trades()
+            
+            if expired_trades:
+                for trade in expired_trades:
+                    user_id = trade['user_id']
+                    trade_id = trade['trade_id']
+                    
+                    # Determine simulated result
+                    result = HighAccuracyIndicators.determine_simulated_result(trade, STATE.price_data)
+                    
+                    # Format result message
+                    result_message = f"**{result}** — *Trade Result* for {trade['asset']} {trade['direction']} at {trade['entry_time']}"
+                    
+                    # The message_id is None for signals requested manually and not auto-tracked
+                    if trade.get('message_id'):
+                        try:
+                            # Send the result as a reply or new message
+                            await STATE.telegram_app.bot.send_message(
+                                chat_id=user_id,
+                                text=result_message,
+                                parse_mode='Markdown',
+                                reply_to_message_id=trade['message_id']
+                            )
+                            logger.info(f"✅ Trade result posted for {trade_id} to user {user_id}: {result}")
+                        except Exception as e:
+                            logger.error(f"Failed to send trade result for {trade_id} to user {user_id}: {e}")
+                    else:
+                        logger.info(f"Skipping result post for non-tracked trade {trade_id}")
+            
+            # Check for results every 10 seconds
+            await asyncio.sleep(10)
+            
+        except asyncio.CancelledError:
+            logger.info("⏱️ Trade result task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Trade result error: {e}")
+            await asyncio.sleep(30)
+
 
 # --- 11. TELEGRAM HANDLERS ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1118,7 +1255,23 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             signal = generate_high_accuracy_signal()
             message = format_signal_message(signal)
             
-            await query.message.reply_text(message, parse_mode='Markdown')
+            message_sent = await query.message.reply_text(message, parse_mode='Markdown')
+
+            # Save active trade for result tracking
+            # --- FIX: Ensure signal_data is JSON serializable ---
+            serializable_signal = signal.copy()
+            serializable_signal['timestamp'] = serializable_signal['timestamp'].isoformat()
+            # ---------------------------------------------------
+            
+            STATE.license_manager.save_active_trade(
+                trade_id=signal['trade_id'], 
+                user_id=user_id, 
+                asset=signal['asset'], 
+                direction=signal['direction'], 
+                entry_time=signal['entry_time'], 
+                signal_data=serializable_signal # Use serializable version
+            )
+            STATE.license_manager.update_trade_message_id(signal['trade_id'], message_sent.message_id)
             
             logger.info(f"👤 User {user_id} requested TANIX AI signal: "
                        f"{signal['asset']} {signal['direction']} "
@@ -1402,6 +1555,7 @@ async def main():
         logger.info("🚀 Starting TANIX AI system...")
         await task_manager.create_task(price_update_task(), "price_updater")
         await task_manager.create_task(auto_signal_task(), "auto_signal")
+        await task_manager.create_task(trade_result_task(), "trade_result_tracker") # Added task
         
         logger.info("🤖 Initializing Telegram bot...")
         application = Application.builder().token(CONFIG["TELEGRAM_BOT_TOKEN"]).build()
