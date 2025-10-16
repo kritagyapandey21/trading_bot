@@ -1603,3 +1603,4 @@ if __name__ == "__main__":
         logger.error(f"❌ Fatal error: {e}")
     finally:
         logger.info("👋 TANIX AI Bot terminated")
+
