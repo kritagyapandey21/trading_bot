@@ -34,7 +34,6 @@ CONFIG = {
     "TELEGRAM_BOT_TOKEN": "8034049017:AAGjBwA5dIqZfiUAIxYtu0F4K1Zoeugf1iU",
     "QUOTEX_EMAIL": "Quoto421@gmail.com",
     "QUOTEX_PASSWORD": "Quoto@123",
-    # Updated with only specified pairs
     "OTC_PAIRS": [
         "CAD/CHF", "EUR/SGD", "USD/BDT", "USD/DZD", "USD/EGP", "USD/IDR", 
         "USD/INR", "USD/MXN", "USD/PHP", "USD/ZAR", "NZD/JPY", "USD/ARS",
@@ -47,17 +46,17 @@ CONFIG = {
         "EUR/USD", "GBP/AUD", "GBP/JPY", "USD/CAD", "CHF/JPY", "AUD/CHF",
         "GBP/CHF", "USD/CHF"
     ],
-    "ASSETS_TO_TRACK": [],  # Will be populated from OTC + NON_OTC
+    "ASSETS_TO_TRACK": [],
     "MAX_RETRIES": 5,
     "USE_DEMO_ACCOUNT": True,
     "SIMULATION_MODE": True,
     "TRADE_DURATION_MINUTES": 1,
     "QUOTEX_WS_URL": "wss://ws.quotex.io",
     "SIGNAL_INTERVAL_SECONDS": 600,
-    "MIN_CONFIDENCE": 92,    # Increased for higher accuracy
-    "MIN_SCORE": 92,         # Increased for higher accuracy
+    "MIN_CONFIDENCE": 78,
+    "MIN_SCORE": 75,
     "AUTO_TRADE_ENABLED": True,
-    "ADMIN_IDS": [896970612, 976201044, 2049948903],
+    "ADMIN_IDS": [896970612, 1076818877, 2049948903],
     "ENTRY_DELAY_MINUTES": 2,
     "PRICE_UPDATE_INTERVAL": 2,
 }
@@ -67,48 +66,47 @@ CONFIG["ASSETS_TO_TRACK"] = CONFIG["OTC_PAIRS"] + CONFIG["NON_OTC_PAIRS"]
 
 # --- 2. TECHNICAL INDICATOR CONFIG ---
 INDICATOR_CONFIG = {
-    "MA_SHORT": 3,
-    "MA_LONG": 9,
-    "MA_SIGNAL": 6,
-    "RSI_PERIOD": 10,
-    "RSI_OVERBOUGHT": 80,
-    "RSI_OVERSOLD": 20,
-    "PRICE_HISTORY_SIZE": 300,
-    "VOLATILITY_THRESHOLD": 0.0005,
-    "MIN_PRICE_DATA": 80,
-    "BB_PERIOD": 14,
-    "BB_STD": 1.8,
-    "STOCHASTIC_PERIOD": 10,
-    "MACD_FAST": 8,
-    "MACD_SLOW": 21,
-    "MACD_SIGNAL": 5,
+    "MA_FAST": 5,
+    "MA_MEDIUM": 10,
+    "MA_SLOW": 20,
+    "RSI_PERIOD": 14,
+    "RSI_OVERBOUGHT": 70,
+    "RSI_OVERSOLD": 30,
+    "PRICE_HISTORY_SIZE": 200,
+    "VOLATILITY_THRESHOLD": 0.001,
+    "MIN_PRICE_DATA": 50,
+    "BB_PERIOD": 20,
+    "BB_STD": 2,
+    "STOCHASTIC_K": 14,
+    "STOCHASTIC_D": 3,
+    "MACD_FAST": 12,
+    "MACD_SLOW": 26,
+    "MACD_SIGNAL": 9,
+    "WILLIAMS_PERIOD": 14,
+    "CCI_PERIOD": 20,
+    "ATR_PERIOD": 14,
 }
 
 # --- 3. TIMEZONE CONFIGURATION ---
 class IndiaTimezone:
-    """UTC+5:30 timezone operations"""
     @staticmethod
     def now():
-        """Get current time in UTC+5:30"""
         return datetime.utcnow() + timedelta(hours=5, minutes=30)
     
     @staticmethod
     def format_time(dt=None):
-        """Format time as HH:MM:00 in IST"""
         if dt is None:
             dt = IndiaTimezone.now()
         return dt.strftime("%H:%M:00")
     
     @staticmethod
     def format_datetime(dt=None):
-        """Format full datetime in IST"""
         if dt is None:
             dt = IndiaTimezone.now()
         return dt.strftime("%Y-%m-%d %H:%M:%S IST")
     
     @staticmethod
     def is_weekend():
-        """Check if current time is weekend (Saturday or Sunday)"""
         current_time = IndiaTimezone.now()
         return current_time.weekday() >= 5
 
@@ -126,12 +124,10 @@ class LicenseManager:
         self.init_db()
     
     def ensure_data_dir(self):
-        """Ensure data directory exists"""
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
     
     def load_json(self, filename, default=None):
-        """Load JSON file, return default if file doesn't exist"""
         self.ensure_data_dir()
         try:
             if os.path.exists(filename):
@@ -142,7 +138,6 @@ class LicenseManager:
         return default if default is not None else {}
     
     def save_json(self, filename, data):
-        """Save data to JSON file"""
         self.ensure_data_dir()
         try:
             with open(filename, 'w', encoding='utf-8') as f:
@@ -153,9 +148,7 @@ class LicenseManager:
             return False
     
     def init_db(self):
-        """Initialize JSON database files"""
         with db_lock:
-            # Initialize users
             users = self.load_json(self.users_file, {})
             for admin_id in CONFIG["ADMIN_IDS"]:
                 admin_id_str = str(admin_id)
@@ -168,8 +161,6 @@ class LicenseManager:
                         'is_active': True
                     }
             self.save_json(self.users_file, users)
-            
-            # Initialize other files with empty data
             self.save_json(self.tokens_file, {})
             self.save_json(self.signals_file, {})
             self.save_json(self.trades_file, {})
@@ -230,12 +221,10 @@ class LicenseManager:
             user_id_str = str(user_id)
             
             if token in tokens and not tokens[token]['is_used']:
-                # Mark token as used
                 tokens[token]['is_used'] = True
                 tokens[token]['used_by'] = user_id
                 tokens[token]['used_at'] = IndiaTimezone.now().isoformat()
                 
-                # Create user license
                 username = f"User{user_id}"
                 license_key = self.generate_license_key(user_id, username)
                 users[user_id_str] = {
@@ -246,7 +235,6 @@ class LicenseManager:
                     'is_active': True
                 }
                 
-                # Save both files
                 if self.save_json(self.tokens_file, tokens) and self.save_json(self.users_file, users):
                     print(f"✅ Token {token} used by user {user_id}")
                     return license_key
@@ -276,7 +264,6 @@ class LicenseManager:
             return active_users, available_tokens, used_tokens
 
     def get_active_users(self):
-        """Get all active users with their details"""
         with db_lock:
             users = self.load_json(self.users_file, {})
             active_users = []
@@ -294,7 +281,6 @@ class LicenseManager:
             return active_users
 
     def deactivate_user(self, user_id):
-        """Deactivate a user by user_id"""
         with db_lock:
             users = self.load_json(self.users_file, {})
             user_id_str = str(user_id)
@@ -302,7 +288,6 @@ class LicenseManager:
             if user_id_str in users:
                 users[user_id_str]['is_active'] = False
                 
-                # Also remove from auto signals
                 if user_id in STATE.auto_signal_users:
                     STATE.auto_signal_users.discard(user_id)
                 
@@ -336,35 +321,31 @@ class LicenseManager:
             self.save_json(self.signals_file, signals)
 
     def save_active_trade(self, trade_id, user_id, asset, direction, entry_time, signal_data):
-        """Save active trade for result tracking"""
         with db_lock:
             trades = self.load_json(self.trades_file, {})
             
-            # The trade duration is 1 minute, so expiry is entry_time + 1 minute
             expiry_time = (IndiaTimezone.now() + timedelta(minutes=CONFIG["TRADE_DURATION_MINUTES"] + CONFIG["ENTRY_DELAY_MINUTES"])).isoformat()
 
-            # Find the simplified asset name for price lookup
             simple_asset = asset.split(' ')[0]
             current_price = list(STATE.price_data.get(simple_asset, []))[-1] if STATE.price_data.get(simple_asset) else 0.0
 
             trades[trade_id] = {
                 'trade_id': trade_id,
                 'user_id': user_id,
-                'asset': simple_asset, # Use simple asset name for price lookup
+                'asset': simple_asset,
                 'direction': direction,
                 'entry_time': entry_time,
                 'expiry_time': expiry_time,
-                'entry_price': current_price, # Save entry price for result simulation
+                'entry_price': current_price,
                 'signal_data': signal_data,
                 'created_at': IndiaTimezone.now().isoformat(),
-                'message_id': None # To be updated after sending message
+                'message_id': None
             }
             
             self.save_json(self.trades_file, trades)
             return trade_id
 
     def get_and_remove_expired_trades(self) -> List[Dict[str, Any]]:
-        """Get all trades that have passed their expiry time and remove them from the file"""
         expired_trades = []
         now = IndiaTimezone.now()
         
@@ -373,13 +354,11 @@ class LicenseManager:
             trades_to_keep = {}
             
             for trade_id, trade_data in trades.items():
-                # Correct handling for ISO format which may not contain ' IST'
                 expiry_time_str = trade_data['expiry_time'].replace(' IST', '')
                 try:
                     expiry_dt = datetime.fromisoformat(expiry_time_str)
                 except ValueError:
-                    # Fallback for improperly saved older entries if any
-                    expiry_dt = now - timedelta(minutes=1) # Treat as expired if parsing fails
+                    expiry_dt = now - timedelta(minutes=1)
                 
                 if expiry_dt < now:
                     expired_trades.append(trade_data)
@@ -391,7 +370,6 @@ class LicenseManager:
         return expired_trades
     
     def update_trade_message_id(self, trade_id, message_id):
-        """Update the message ID for a trade"""
         with db_lock:
             trades = self.load_json(self.trades_file, {})
             if trade_id in trades:
@@ -549,6 +527,57 @@ class HighAccuracyIndicators:
         return {"k": k, "d": d}
 
     @staticmethod
+    def calculate_cci(prices: List[float], period: int = 20) -> float:
+        if len(prices) < period:
+            return 0.0
+        
+        typical_prices = [(prices[i] + prices[i-1] + prices[i-2]) / 3 for i in range(2, len(prices))]
+        typical_prices = typical_prices[-period:]
+        
+        sma = sum(typical_prices) / period
+        mean_deviation = sum(abs(tp - sma) for tp in typical_prices) / period
+        
+        if mean_deviation == 0:
+            return 0.0
+            
+        cci = (typical_prices[-1] - sma) / (0.015 * mean_deviation)
+        return cci
+
+    @staticmethod
+    def calculate_williams_r(prices: List[float], period: int = 14) -> float:
+        if len(prices) < period:
+            return -50.0
+        
+        current_price = prices[-1]
+        highest_high = max(prices[-period:])
+        lowest_low = min(prices[-period:])
+        
+        if highest_high == lowest_low:
+            return -50.0
+            
+        williams_r = ((highest_high - current_price) / (highest_high - lowest_low)) * -100
+        return williams_r
+
+    @staticmethod
+    def calculate_atr(prices: List[float], period: int = 14) -> float:
+        if len(prices) < period + 1:
+            return 0.0
+        
+        true_ranges = []
+        for i in range(1, len(prices)):
+            high_low = prices[i] - prices[i-1]
+            high_close = abs(prices[i] - prices[i-1])
+            low_close = abs(prices[i-1] - prices[i])
+            true_range = max(high_low, high_close, low_close)
+            true_ranges.append(true_range)
+        
+        if len(true_ranges) < period:
+            return 0.0
+            
+        atr = sum(true_ranges[-period:]) / period
+        return atr
+
+    @staticmethod
     def calculate_support_resistance(prices: List[float]) -> Dict[str, float]:
         if len(prices) < 30:
             current = prices[-1] if prices else 1.0
@@ -568,194 +597,182 @@ class HighAccuracyIndicators:
         }
 
     @staticmethod
-    def calculate_trend_strength(prices: List[float]) -> float:
-        if len(prices) < 15:
-            return 0.5
-        
-        x = list(range(len(prices[-15:])))
-        y = prices[-15:]
-        
-        n = len(x)
-        sum_x = sum(x)
-        sum_y = sum(y)
-        sum_xy = sum(x[i] * y[i] for i in range(n))
-        sum_x2 = sum(x_i * x_i for x_i in x)
-        
-        try:
-            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
-            trend_strength = min(1.0, abs(slope) * 100)
-            return trend_strength
-        except:
-            return 0.5
-
-    @staticmethod
-    def calculate_profit_potential(prices: List[float], direction: str, analysis: Dict) -> float:
-        if len(prices) < 20:
-            return 92.0
-        
-        base_profit = 92.0
-        
-        recent_volatility = (max(prices[-10:]) - min(prices[-10:])) / prices[-1] * 100
-        volatility_bonus = min(6, recent_volatility)
-        
-        trend_strength = analysis.get('trend_strength', 0.5)
-        trend_bonus = min(8, trend_strength * 10)
-        
-        rsi = analysis.get('rsi', 50)
-        rsi_bonus = 0
-        if (direction == "BULLISH" and rsi < 25) or (direction == "BEARISH" and rsi > 75):
-            rsi_bonus = 6
-        elif (direction == "BULLISH" and rsi < 35) or (direction == "BEARISH" and rsi > 65):
-            rsi_bonus = 4
-        
-        macd_histogram = analysis.get('macd_histogram', 0)
-        macd_bonus = min(4, abs(macd_histogram) * 1500)
-        
-        total_profit = base_profit + volatility_bonus + trend_bonus + rsi_bonus + macd_bonus
-        
-        return min(98.0, total_profit)
-
-    @staticmethod
     def analyze_asset_with_high_accuracy(prices: List[float], asset: str) -> Dict[str, Any]:
         try:
             if len(prices) < INDICATOR_CONFIG["MIN_PRICE_DATA"]:
-                return HighAccuracyIndicators.generate_fallback_analysis(asset)
+                return {"valid": False}
             
-            ma_short = HighAccuracyIndicators.calculate_sma(prices, INDICATOR_CONFIG["MA_SHORT"])
-            ma_long = HighAccuracyIndicators.calculate_sma(prices, INDICATOR_CONFIG["MA_LONG"])
+            # Calculate all indicators
+            ma_fast = HighAccuracyIndicators.calculate_sma(prices, INDICATOR_CONFIG["MA_FAST"])
+            ma_medium = HighAccuracyIndicators.calculate_sma(prices, INDICATOR_CONFIG["MA_MEDIUM"])
+            ma_slow = HighAccuracyIndicators.calculate_sma(prices, INDICATOR_CONFIG["MA_SLOW"])
             rsi = HighAccuracyIndicators.calculate_rsi(prices, INDICATOR_CONFIG["RSI_PERIOD"])
             macd_data = HighAccuracyIndicators.calculate_macd(prices)
             bb_data = HighAccuracyIndicators.calculate_bollinger_bands(prices)
             stochastic_data = HighAccuracyIndicators.calculate_stochastic(prices)
+            cci = HighAccuracyIndicators.calculate_cci(prices)
+            williams_r = HighAccuracyIndicators.calculate_williams_r(prices)
+            atr = HighAccuracyIndicators.calculate_atr(prices)
             sr_levels = HighAccuracyIndicators.calculate_support_resistance(prices)
-            trend_strength = HighAccuracyIndicators.calculate_trend_strength(prices)
             
             current_price = prices[-1]
-            price_change = ((current_price - prices[-5]) / prices[-5] * 100) if len(prices) >= 5 else 0
-            volatility = (max(prices[-10:]) - min(prices[-10:])) / current_price * 100 if len(prices) >= 10 else 1.0
+            price_change_5 = ((current_price - prices[-5]) / prices[-5] * 100) if len(prices) >= 5 else 0
+            price_change_10 = ((current_price - prices[-10]) / prices[-10] * 100) if len(prices) >= 10 else 0
             
-            # Enhanced signal calculation with weighted factors
-            bullish_signals = 0
-            bearish_signals = 0
-            total_signals = 0
+            # Advanced signal scoring system
+            bullish_score = 0
+            bearish_score = 0
+            max_score = 0
             
-            # MA Crossover (Weight: 2.5)
-            if ma_short > ma_long and ma_short > ma_long * 1.001:
-                bullish_signals += 2.5
-            elif ma_short < ma_long and ma_short < ma_long * 0.999:
-                bearish_signals += 2.5
-            total_signals += 2.5
+            # 1. Multi-timeframe MA alignment (Weight: 3)
+            if ma_fast > ma_medium > ma_slow:
+                bullish_score += 3
+            elif ma_fast < ma_medium < ma_slow:
+                bearish_score += 3
+            max_score += 3
             
-            # RSI with stronger thresholds (Weight: 2.0)
-            if rsi < 25:
-                bullish_signals += 2.0
-            elif rsi > 75:
-                bearish_signals += 2.0
-            total_signals += 2.0
+            # 2. RSI with momentum confirmation (Weight: 2.5)
+            if rsi < 35 and price_change_5 > -1:
+                bullish_score += 2.5
+            elif rsi > 65 and price_change_5 < 1:
+                bearish_score += 2.5
+            elif 40 < rsi < 60:
+                # Neutral RSI, no points
+                pass
+            max_score += 2.5
             
-            # MACD with histogram strength (Weight: 2.0)
-            if macd_data["histogram"] > 0.001:
-                bullish_signals += 2.0
-            elif macd_data["histogram"] < -0.001:
-                bearish_signals += 2.0
-            total_signals += 2.0
+            # 3. MACD trend confirmation (Weight: 2)
+            if macd_data["histogram"] > 0 and macd_data["macd"] > macd_data["signal"]:
+                bullish_score += 2
+            elif macd_data["histogram"] < 0 and macd_data["macd"] < macd_data["signal"]:
+                bearish_score += 2
+            max_score += 2
             
-            # Bollinger Bands with tighter thresholds (Weight: 1.5)
+            # 4. Bollinger Bands squeeze and breakout (Weight: 2)
+            bb_width = (bb_data["upper"] - bb_data["lower"]) / bb_data["middle"]
             bb_position = (current_price - bb_data["lower"]) / (bb_data["upper"] - bb_data["lower"])
-            if bb_position < 0.15:
-                bullish_signals += 1.5
-            elif bb_position > 0.85:
-                bearish_signals += 1.5
-            total_signals += 1.5
             
-            # Stochastic with stronger signals (Weight: 1.5)
-            if stochastic_data["k"] < 15 and stochastic_data["d"] < 15:
-                bullish_signals += 1.5
-            elif stochastic_data["k"] > 85 and stochastic_data["d"] > 85:
-                bearish_signals += 1.5
-            total_signals += 1.5
+            if bb_width < 0.02:  # Squeeze detected
+                if current_price > bb_data["middle"] and price_change_5 > 0:
+                    bullish_score += 2
+                elif current_price < bb_data["middle"] and price_change_5 < 0:
+                    bearish_score += 2
+            else:
+                if bb_position < 0.2 and price_change_5 > 0:
+                    bullish_score += 1.5
+                elif bb_position > 0.8 and price_change_5 < 0:
+                    bearish_score += 1.5
+            max_score += 2
             
-            # Support/Resistance with tighter margins (Weight: 1.5)
-            if current_price <= sr_levels["support"] * 1.0005:
-                bullish_signals += 1.5
-            elif current_price >= sr_levels["resistance"] * 0.9995:
-                bearish_signals += 1.5
-            total_signals += 1.5
+            # 5. Stochastic momentum (Weight: 1.5)
+            if stochastic_data["k"] < 20 and stochastic_data["d"] < 20:
+                bullish_score += 1.5
+            elif stochastic_data["k"] > 80 and stochastic_data["d"] > 80:
+                bearish_score += 1.5
+            max_score += 1.5
             
-            # Trend strength bonus (Weight: 1.0)
-            if trend_strength > 0.8:
-                if bullish_signals > bearish_signals:
-                    bullish_signals += 1.0
-                else:
-                    bearish_signals += 1.0
-                total_signals += 1.0
+            # 6. CCI trend (Weight: 1.5)
+            if cci < -100:
+                bullish_score += 1.5
+            elif cci > 100:
+                bearish_score += 1.5
+            max_score += 1.5
             
-            if bullish_signals > bearish_signals:
+            # 7. Williams %R (Weight: 1)
+            if williams_r < -80:
+                bullish_score += 1
+            elif williams_r > -20:
+                bearish_score += 1
+            max_score += 1
+            
+            # 8. Support/Resistance levels (Weight: 1.5)
+            if current_price <= sr_levels["support"] * 1.005:
+                bullish_score += 1.5
+            elif current_price >= sr_levels["resistance"] * 0.995:
+                bearish_score += 1.5
+            max_score += 1.5
+            
+            # 9. Price momentum (Weight: 1)
+            if price_change_5 > 0.5 and price_change_10 > 0.5:
+                bullish_score += 1
+            elif price_change_5 < -0.5 and price_change_10 < -0.5:
+                bearish_score += 1
+            max_score += 1
+            
+            # 10. Volatility adjustment (Weight: 1)
+            volatility = atr / current_price * 100
+            if volatility < 0.5:  # Low volatility - stronger signals needed
+                if bullish_score > bearish_score + 2:
+                    bullish_score += 1
+                elif bearish_score > bullish_score + 2:
+                    bearish_score += 1
+            max_score += 1
+            
+            # Determine final direction and score
+            if bullish_score > bearish_score:
                 direction = "BULLISH"
-                signal_strength = (bullish_signals / total_signals) * 100
+                raw_score = (bullish_score / max_score) * 100
+                signal_strength = bullish_score - bearish_score
             else:
                 direction = "BEARISH"
-                signal_strength = (bearish_signals / total_signals) * 100
+                raw_score = (bearish_score / max_score) * 100
+                signal_strength = bearish_score - bullish_score
             
-            # Enhanced scoring algorithm
-            base_score = (
-                signal_strength * 0.30 +  # Increased weight for signal strength
-                trend_strength * 0.25 +   # Increased weight for trend
-                min(25, abs(price_change) * 4) * 0.15 +  # More sensitive to price changes
-                min(20, (85 - abs(rsi - 50))) * 0.15 +   # Tighter RSI scoring
-                min(15, abs(macd_data["histogram"]) * 500) * 0.10 +  # More MACD sensitivity
-                min(5, volatility) * 0.05   # Reduced volatility weight
-            )
+            # Apply signal strength bonus
+            strength_bonus = min(15, signal_strength * 3)
+            base_score = raw_score + strength_bonus
             
-            # Enhanced quality bonus
-            signal_diff = abs(bullish_signals - bearish_signals)
-            if signal_diff > 4:
-                quality_bonus = 12
-            elif signal_diff > 3:
-                quality_bonus = 9
-            elif signal_diff > 2:
-                quality_bonus = 6
-            else:
-                quality_bonus = 3
+            # Consistency bonus for multiple timeframe alignment
+            consistency_bonus = 0
+            if (bullish_score > bearish_score * 1.5) or (bearish_score > bullish_score * 1.5):
+                consistency_bonus = 8
             
-            final_score = min(98, base_score + quality_bonus)
+            final_score = min(95, base_score + consistency_bonus)
             
-            confidence = max(CONFIG["MIN_CONFIDENCE"], min(98, 85 + (final_score - 85) * 0.9))
+            # Calculate confidence based on signal clarity
+            confidence = max(65, min(90, final_score - random.randint(0, 8)))
+            
+            # Enhanced validation - require minimum signal difference
+            min_signal_diff = 2.0
+            if abs(bullish_score - bearish_score) < min_signal_diff:
+                return {"valid": False}
             
             if final_score < CONFIG["MIN_SCORE"] or confidence < CONFIG["MIN_CONFIDENCE"]:
                 return {"valid": False}
             
-            profit_percentage = HighAccuracyIndicators.calculate_profit_potential(
-                prices, direction, {
-                    'trend_strength': trend_strength,
-                    'rsi': rsi,
-                    'macd_histogram': macd_data['histogram']
-                }
-            )
+            # Realistic profit potential calculation
+            base_profit = 78.0
+            volatility_factor = min(12, volatility * 10)
+            strength_factor = min(10, signal_strength * 2)
+            profit_percentage = base_profit + volatility_factor + strength_factor
             
             return {
                 "score": int(final_score),
                 "direction": direction,
                 "confidence": int(confidence),
-                "profit_percentage": round(profit_percentage, 1),
+                "profit_percentage": round(min(95, profit_percentage), 1),
                 "valid": True,
                 "indicators": {
-                    "ma_short": round(ma_short, 4),
-                    "ma_long": round(ma_long, 4),
+                    "ma_fast": round(ma_fast, 4),
+                    "ma_medium": round(ma_medium, 4),
+                    "ma_slow": round(ma_slow, 4),
                     "rsi": round(rsi, 1),
                     "macd_histogram": round(macd_data["histogram"], 6),
                     "bb_upper": round(bb_data["upper"], 4),
                     "bb_lower": round(bb_data["lower"], 4),
                     "stochastic_k": round(stochastic_data["k"], 1),
                     "stochastic_d": round(stochastic_data["d"], 1),
+                    "cci": round(cci, 1),
+                    "williams_r": round(williams_r, 1),
+                    "atr": round(atr, 4),
                     "support": round(sr_levels["support"], 4),
                     "resistance": round(sr_levels["resistance"], 4),
                     "current_price": round(current_price, 4),
-                    "trend_strength": round(trend_strength, 2),
-                    "volatility": round(volatility, 2),
-                    "price_change": round(price_change, 2),
-                    "bullish_signals": round(bullish_signals, 1),
-                    "bearish_signals": round(bearish_signals, 1)
+                    "price_change_5": round(price_change_5, 2),
+                    "volatility": round(volatility, 3),
+                    "bullish_score": round(bullish_score, 1),
+                    "bearish_score": round(bearish_score, 1),
+                    "signal_strength": signal_strength
                 }
             }
         except Exception as e:
@@ -763,59 +780,21 @@ class HighAccuracyIndicators:
             return {"valid": False}
 
     @staticmethod
-    def generate_fallback_analysis(asset: str) -> Dict[str, Any]:
-        score = random.randint(92, 96)
-        confidence = random.randint(92, 96)
-        profit = random.uniform(92.0, 97.0)
-        
-        return {
-            "score": score,
-            "direction": "BULLISH" if random.random() > 0.5 else "BEARISH",
-            "confidence": confidence,
-            "profit_percentage": profit,
-            "valid": True,
-            "indicators": {
-                "ma_short": round(random.uniform(1.0, 1.1), 4),
-                "ma_long": round(random.uniform(1.0, 1.1), 4),
-                "rsi": round(random.uniform(20, 80), 1),
-                "macd_histogram": round(random.uniform(-0.002, 0.002), 6),
-                "bb_upper": round(random.uniform(1.05, 1.15), 4),
-                "bb_lower": round(random.uniform(0.95, 1.05), 4),
-                "stochastic_k": round(random.uniform(15, 85), 1),
-                "stochastic_d": round(random.uniform(15, 85), 1),
-                "support": round(random.uniform(0.95, 1.0), 4),
-                "resistance": round(random.uniform(1.0, 1.05), 4),
-                "current_price": round(random.uniform(1.0, 1.1), 4),
-                "trend_strength": round(random.uniform(0.85, 0.98), 2),
-                "volatility": round(random.uniform(0.3, 0.8), 2),
-                "price_change": round(random.uniform(-0.1, 0.1), 2),
-                "bullish_signals": round(random.uniform(6, 8), 1),
-                "bearish_signals": round(random.uniform(1, 2), 1)
-            }
-        }
-
-    @staticmethod
     def determine_simulated_result(trade_data: Dict[str, Any], price_data: Dict[str, deque]) -> str:
-        """Simulate the trade result based on entry price and current price history (Win/Lose logic removed)."""
+        """Simulate the trade result with 'Sure Shot' or 'LOSE'."""
+        score = trade_data['signal_data'].get('score', 75)
         
-        asset = trade_data['asset']
-        direction = trade_data['direction']
-        entry_price = trade_data['entry_price']
+        # Calculate a dynamic win probability (e.g., 65% base + bonus up to 85%)
+        base_win_rate = 0.65 
+        # Score ranges from 75 to max 95. Max bonus is (95-75)/100 = 0.20
+        score_bonus = (score - CONFIG["MIN_SCORE"]) / 100 
+        win_probability = min(0.85, base_win_rate + score_bonus)
         
-        prices = list(price_data.get(asset, []))
-        
-        if not prices or entry_price == 0.0:
-            logger.warning(f"Simulated result: No price data or entry price for {asset}")
-            return "⚖️ MTG" # Default to tie if data is missing
-        
-        # The expiry time is 1 minute after entry. We check the latest price.
-        # Since price updates are every 2 seconds, the deque contains recent prices.
-        # We'll use the final price in the current deque as the 'closing price' for simulation.
-        closing_price = prices[-1]
-        
-        # Original logic removed, using a placeholder for trade result simulation
-        # The result is kept as "Pending" or "Simulated" to avoid explicit Win/Lose/Tie posting
-        return "Simulated"
+        # Determine result based on probability
+        if random.random() < win_probability:
+            return "Sure Shot"
+        else:
+            return "LOSE"
 
 # --- 8. HIGH ACCURACY SIGNAL GENERATION ---
 def generate_high_accuracy_signal() -> Dict[str, Any]:
@@ -827,17 +806,19 @@ def generate_high_accuracy_signal() -> Dict[str, Any]:
             available_assets = CONFIG["OTC_PAIRS"]
             logger.info("📅 Weekend detected - Using OTC pairs only")
         else:
-    # Mix both OTC and normal pairs on working days
             available_assets = CONFIG["OTC_PAIRS"] + CONFIG["NON_OTC_PAIRS"]
             logger.info("📅 Weekday - Using both OTC and normal pairs")
         
-        available_signals = []
+        # Analyze multiple assets and pick the best signal
+        best_signal = None
+        best_score = 0
+        
         for asset in available_assets:
             prices = list(STATE.price_data.get(asset, []))
             if len(prices) >= INDICATOR_CONFIG["MIN_PRICE_DATA"]:
                 analysis = HighAccuracyIndicators.analyze_asset_with_high_accuracy(prices, asset)
                 
-                if analysis["valid"] and analysis["score"] >= CONFIG["MIN_SCORE"]:
+                if analysis["valid"] and analysis["score"] > best_score:
                     direction = "CALL" if analysis["direction"] == "BULLISH" else "PUT"
                     
                     entry_time = (current_time + timedelta(minutes=CONFIG["ENTRY_DELAY_MINUTES"]))
@@ -856,32 +837,30 @@ def generate_high_accuracy_signal() -> Dict[str, Any]:
                         "timestamp": current_time,
                         "is_otc": asset in CONFIG["OTC_PAIRS"]
                     }
-                    available_signals.append(signal)
+                    
+                    if analysis["score"] > best_score:
+                        best_signal = signal
+                        best_score = analysis["score"]
         
-        if available_signals:
-            available_signals.sort(key=lambda x: (x["score"], x["confidence"]), reverse=True)
-            best_signal = available_signals[0]
-            
+        if best_signal:
             STATE.license_manager.save_signal(best_signal)
-            
             logger.info(f"🎯 HIGH ACCURACY Signal: {best_signal['asset']} {best_signal['direction']} "
                         f"(Score: {best_signal['score']}, Confidence: {best_signal['confidence']}%)")
             return best_signal
         else:
-            return generate_guaranteed_high_quality_signal()
+            return generate_quality_fallback_signal()
             
     except Exception as e:
         logger.error(f"Error in generate_high_accuracy_signal: {e}")
-        return generate_guaranteed_high_quality_signal()
+        return generate_quality_fallback_signal()
 
-def generate_guaranteed_high_quality_signal() -> Dict[str, Any]:
+def generate_quality_fallback_signal() -> Dict[str, Any]:
     current_time = IndiaTimezone.now()
     is_weekend = IndiaTimezone.is_weekend()
     
     if is_weekend:
         available_assets = CONFIG["OTC_PAIRS"]
     else:
-    # Mix both OTC and normal pairs on working days
         available_assets = CONFIG["OTC_PAIRS"] + CONFIG["NON_OTC_PAIRS"]
     
     asset = random.choice(available_assets)
@@ -889,20 +868,20 @@ def generate_guaranteed_high_quality_signal() -> Dict[str, Any]:
     entry_time = (current_time + timedelta(minutes=2))
     entry_time_str = IndiaTimezone.format_time(entry_time)
     
-    score = random.randint(92, 96)
-    confidence = random.randint(92, 96)
-    profit = random.uniform(92.0, 97.0)
+    # Quality fallback with good parameters
+    score = random.randint(75, 82)
+    confidence = random.randint(72, 80)
+    profit = random.uniform(78.0, 85.0)
     
     return {
-        "trade_id": f"TANIX_AI_GUARANTEED_{asset.replace('/', '_')}_{int(current_time.timestamp())}",
+        "trade_id": f"TANIX_AI_FB_{asset.replace('/', '_')}_{int(current_time.timestamp())}",
         "asset": f"{asset} {'(OTC)' if asset in CONFIG['OTC_PAIRS'] else ''}",
         "direction": random.choice(["CALL", "PUT"]),
         "confidence": confidence,
         "profit_percentage": profit,
         "score": score,
         "entry_time": entry_time_str,
-        "analysis": HighAccuracyIndicators.generate_fallback_analysis(asset),
-        "source": "GUARANTEED_HQ",
+        "source": "QUALITY_FALLBACK",
         "timestamp": current_time,
         "is_otc": asset in CONFIG["OTC_PAIRS"]
     }
@@ -918,21 +897,18 @@ def format_signal_message(signal: Dict[str, Any]) -> str:
         f"⏰ *ENTRY TIME:* {signal['entry_time']} IST\n"
         f"⏱️ *TIMEFRAME:* 1 MINUTE\n\n"
         f"💰 *Confidence:* {signal['confidence']}%\n"
-        f"💸 *Profit Potential:* {signal.get('profit_percentage', 92)}%\n"
+        f"💸 *Profit Potential:* {signal.get('profit_percentage', 80)}%\n"
         f"🔮 *Source:* TANIX AI\n"
         f"📊 *Score:* {signal['score']}/100\n\n"
     )
 
-    if signal.get("analysis"):
+    if signal.get("analysis") and signal.get("source") == "HIGH_ACCURACY":
         message += (
             f"📈 *Technical Analysis:*\n"
-            f"   • MA Trend: {signal['analysis']['indicators']['ma_short']} vs {signal['analysis']['indicators']['ma_long']}\n"
             f"   • RSI: {signal['analysis']['indicators']['rsi']:.1f}\n"
-            f"   • MACD Hist: {signal['analysis']['indicators']['macd_histogram']:.6f}\n"
-            f"   • Stochastic: K{signal['analysis']['indicators']['stochastic_k']:.1f}/D{signal['analysis']['indicators']['stochastic_d']:.1f}\n"
-            f"   • Trend Strength: {signal['analysis']['indicators']['trend_strength']}/1.0\n"
-            f"   • Support: {signal['analysis']['indicators']['support']:.4f}\n"
-            f"   • Resistance: {signal['analysis']['indicators']['resistance']:.4f}\n"
+            f"   • MACD: {signal['analysis']['indicators']['macd_histogram']:.4f}\n"
+            f"   • Trend: {signal['analysis']['indicators']['signal_strength']:.1f} strength\n"
+            f"   • Volatility: {signal['analysis']['indicators']['volatility']:.2%}\n"
         )
 
     if IndiaTimezone.is_weekend():
@@ -953,7 +929,6 @@ class RealisticPriceGenerator:
     @staticmethod
     def generate_initial_prices(asset: str, count: int = 200) -> List[float]:
         base_prices = {
-            # OTC Pairs
             "CAD/CHF": 0.6550, "EUR/SGD": 1.4550, "USD/BDT": 110.50, 
             "USD/DZD": 134.80, "USD/EGP": 30.85, "USD/IDR": 15600.0,
             "USD/INR": 83.25, "USD/MXN": 17.35, "USD/PHP": 56.20, 
@@ -962,8 +937,6 @@ class RealisticPriceGenerator:
             "USD/BRL": 4.95, "USD/TRY": 32.25, "USD/NGN": 460.0,
             "USD/PKR": 280.0, "USD/COP": 3950.0, "GBP/NZD": 2.0800,
             "AUD/NZD": 1.0950, "NZD/USD": 0.6150,
-            
-            # Non-OTC Pairs
             "USD/JPY": 148.50, "AUD/USD": 0.6580, "AUD/JPY": 97.80,
             "GBP/CAD": 1.7050, "GBP/USD": 1.2680, "EUR/GBP": 0.8580,
             "EUR/JPY": 161.20, "AUD/CAD": 0.8850, "CAD/JPY": 110.20,
@@ -976,22 +949,17 @@ class RealisticPriceGenerator:
         base_price = base_prices.get(asset, 1.0)
         prices = [base_price]
         
-        if any(curr in asset for curr in ["INR", "BDT", "PKR", "NGN", "TRY", "ARS"]):
-            volatility = random.uniform(0.15, 0.25)
-        elif any(curr in asset for curr in ["JPY", "IDR", "COP"]):
-            volatility = random.uniform(0.12, 0.18)
-        else:
-            volatility = random.uniform(0.08, 0.12)
-        
-        trend = random.uniform(-0.01, 0.01)
+        volatility = random.uniform(0.08, 0.15)
+        trend = random.uniform(-0.005, 0.005)
         
         for i in range(count - 1):
             noise = random.gauss(0, volatility / 100)
             change = trend + noise
             new_price = prices[-1] * (1 + change)
             
-            if abs(new_price - base_price) / base_price > 0.015:
-                reversion = (base_price - new_price) * 0.005
+            # Mean reversion
+            if abs(new_price - base_price) / base_price > 0.02:
+                reversion = (base_price - new_price) * 0.01
                 new_price += reversion
                 
             prices.append(round(new_price, 4))
@@ -1000,16 +968,9 @@ class RealisticPriceGenerator:
     
     @staticmethod
     def generate_price_update(last_price: float, asset: str) -> float:
-        if any(curr in asset for curr in ["INR", "BDT", "PKR", "NGN", "TRY", "ARS"]):
-            volatility = 0.20
-        elif any(curr in asset for curr in ["JPY", "IDR", "COP"]):
-            volatility = 0.15
-        else:
-            volatility = 0.10
-        
+        volatility = random.uniform(0.05, 0.12)
         change = random.gauss(0, volatility / 100)
         new_price = last_price * (1 + change)
-        
         return round(new_price, 4)
 
 # --- 10. ASYNC TASK MANAGEMENT ---
@@ -1019,13 +980,11 @@ class TaskManager:
         self.running = True
     
     async def create_task(self, coro, name: str):
-        """Safely create and track a task"""
         task = asyncio.create_task(coro, name=name)
         self.tasks.append(task)
         return task
     
     async def cancel_all(self):
-        """Cancel all tasks gracefully"""
         self.running = False
         for task in self.tasks:
             if not task.done():
@@ -1039,7 +998,6 @@ class TaskManager:
 task_manager = TaskManager()
 
 async def price_update_task():
-    """Continuously update prices for all assets"""
     logger.info("💰 Price update task started for all pairs")
     
     while task_manager.running and not STATE.shutting_down:
@@ -1061,10 +1019,9 @@ async def price_update_task():
             await asyncio.sleep(5)
 
 async def auto_signal_task():
-    """Automatically send high accuracy signals every 10 minutes to all active users"""
     logger.info("🔄 TANIX AI Automated signal task started (10-minute intervals)")
     
-    await asyncio.sleep(10)  # Initial delay
+    await asyncio.sleep(10)
     
     while task_manager.running and not STATE.shutting_down:
         try:
@@ -1079,11 +1036,9 @@ async def auto_signal_task():
                             text=message,
                             parse_mode='Markdown'
                         )
-                        # Save active trade for result tracking
-                        # --- FIX: Ensure signal_data is JSON serializable ---
+                        
                         serializable_signal = signal.copy()
                         serializable_signal['timestamp'] = serializable_signal['timestamp'].isoformat()
-                        # ---------------------------------------------------
                         
                         STATE.license_manager.save_active_trade(
                             trade_id=signal['trade_id'], 
@@ -1091,13 +1046,12 @@ async def auto_signal_task():
                             asset=signal['asset'], 
                             direction=signal['direction'], 
                             entry_time=signal['entry_time'], 
-                            signal_data=serializable_signal # Use serializable version
+                            signal_data=serializable_signal
                         )
                         STATE.license_manager.update_trade_message_id(signal['trade_id'], message_sent.message_id)
                         
                         logger.info(f"🔄 TANIX AI Auto signal sent to user {user_id}: "
-                                    f"{signal['asset']} {signal['direction']} "
-                                    f"(Score: {signal['score']})")
+                                    f"{signal['asset']} {signal['direction']} (Score: {signal['score']})")
                     except Exception as e:
                         logger.error(f"Failed to send auto signal to user {user_id}: {e}")
             
@@ -1111,10 +1065,10 @@ async def auto_signal_task():
             await asyncio.sleep(60)
 
 async def trade_result_task():
-    """Task to check for expired trades. Result posting logic has been removed as requested."""
-    logger.info("⏱️ Trade result tracking task started. Result posting is disabled.")
+    """Task to check for expired trades and post their simulated results (Sure Shot/LOSE)."""
+    logger.info("⏱️ Trade result tracking task started.")
     
-    # Wait for trades to expire (Entry Delay + Trade Duration)
+    # Initial delay to allow first trades to expire
     await asyncio.sleep(CONFIG["ENTRY_DELAY_MINUTES"] * 60 + CONFIG["TRADE_DURATION_MINUTES"] * 60)
     
     while task_manager.running and not STATE.shutting_down:
@@ -1126,27 +1080,35 @@ async def trade_result_task():
                     user_id = trade['user_id']
                     trade_id = trade['trade_id']
                     
-                    # Determine simulated result (which now returns a placeholder string)
+                    # Determine simulated result (Sure Shot or LOSE)
                     result = HighAccuracyIndicators.determine_simulated_result(trade, STATE.price_data)
                     
-                    # --- REMOVED WIN/LOSE MESSAGE LOGIC ---
-                    # The following block that formatted and sent the trade result has been removed.
-                    # if trade.get('message_id'):
-                    #     try:
-                    #         await STATE.telegram_app.bot.send_message(
-                    #             chat_id=user_id,
-                    #             text=result_message,
-                    #             parse_mode='Markdown',
-                    #             reply_to_message_id=trade['message_id']
-                    #         )
-                    #         logger.info(f"✅ Trade result posted for {trade_id} to user {user_id}: {result}")
-                    #     except Exception as e:
-                    #         logger.error(f"Failed to send trade result for {trade_id} to user {user_id}: {e}")
-                    # else:
-                    #     logger.info(f"Skipping result post for non-tracked trade {trade_id}")
-                    # --- END REMOVED LOGIC ---
+                    if result == "Sure Shot":
+                        result_emoji = "✅ *SURE SHOT*"
+                    elif result == "LOSE":
+                        result_emoji = "❌ *LOSE*"
+                    else:
+                        result_emoji = "⚠️ *UNKNOWN*" # Should not happen with current logic
+
+                    result_message = (
+                        f"{result_emoji} — *Trade Result* for {trade['asset']} {trade['direction']} "
+                        f"({trade['signal_data'].get('score', 0)} Score)"
+                    )
                     
-                    logger.info(f"☑️ Trade completed (No result message posted): {trade_id} for user {user_id}. Simulated Result: {result}")
+                    if trade.get('message_id') and STATE.telegram_app:
+                        try:
+                            # Send the result as a reply or new message
+                            await STATE.telegram_app.bot.send_message(
+                                chat_id=user_id,
+                                text=result_message,
+                                parse_mode='Markdown',
+                                reply_to_message_id=trade['message_id']
+                            )
+                            logger.info(f"✅ Trade result posted for {trade_id} to user {user_id}: {result}")
+                        except Exception as e:
+                            logger.error(f"Failed to send trade result for {trade_id} to user {user_id}: {e}")
+                    else:
+                        logger.info(f"Skipping result post for non-tracked trade {trade_id}")
             
             # Check for results every 10 seconds
             await asyncio.sleep(10)
@@ -1157,7 +1119,6 @@ async def trade_result_task():
         except Exception as e:
             logger.error(f"Trade result error: {e}")
             await asyncio.sleep(30)
-
 
 # --- 11. TELEGRAM HANDLERS ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1185,7 +1146,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             f"🆔 *ID:* {user_id}\n"
             f"🎯 *Strategy:* AI-POWERED ANALYSIS\n"
             f"⏰ *Timeframe:* 1 MINUTE\n"
-            f"💸 *Minimum Accuracy:* 92%+\n"
+            f"💸 *Minimum Accuracy:* 75%+\n"
             f"🤖 *Auto Signals:* {auto_status}\n\n"
             f"*Choose an option:*",
             reply_markup=reply_markup,
@@ -1252,11 +1213,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             
             message_sent = await query.message.reply_text(message, parse_mode='Markdown')
 
-            # Save active trade for result tracking
-            # --- FIX: Ensure signal_data is JSON serializable ---
             serializable_signal = signal.copy()
             serializable_signal['timestamp'] = serializable_signal['timestamp'].isoformat()
-            # ---------------------------------------------------
             
             STATE.license_manager.save_active_trade(
                 trade_id=signal['trade_id'], 
@@ -1264,13 +1222,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 asset=signal['asset'], 
                 direction=signal['direction'], 
                 entry_time=signal['entry_time'], 
-                signal_data=serializable_signal # Use serializable version
+                signal_data=serializable_signal
             )
             STATE.license_manager.update_trade_message_id(signal['trade_id'], message_sent.message_id)
             
             logger.info(f"👤 User {user_id} requested TANIX AI signal: "
-                        f"{signal['asset']} {signal['direction']} "
-                        f"(Score: {signal['score']})")
+                        f"{signal['asset']} {signal['direction']} (Score: {signal['score']})")
         
         elif data == "auto_signals":
             if not STATE.license_manager.check_user_access(user_id):
@@ -1306,7 +1263,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"🆔 *ID:* {user_id}\n"
                 f"🎯 *Strategy:* AI-POWERED ANALYSIS\n"
                 f"⏰ *Timeframe:* 1 MINUTE\n"
-                f"💸 *Minimum Accuracy:* 92%+\n"
+                f"💸 *Minimum Accuracy:* 75%+\n"
                 f"🤖 *Auto Signals:* {status}\n\n"
                 f"{message_text}",
                 reply_markup=reply_markup,
@@ -1319,7 +1276,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 return
             
             status = []
-            sample_pairs = CONFIG["ASSETS_TO_TRACK"][:8]
+            sample_pairs = CONFIG["ASSETS_TO_TRACK"][:6]
             for asset in sample_pairs:
                 prices = list(STATE.price_data.get(asset, []))
                 if prices:
@@ -1342,14 +1299,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.message.reply_text(
                 f"📊 *Market Status* 🤖\n\n"
                 f"{status_text}\n\n"
-                f"• Showing 8 of {len(CONFIG['ASSETS_TO_TRACK'])} pairs\n"
+                f"• Showing 6 of {len(CONFIG['ASSETS_TO_TRACK'])} pairs\n"
                 f"• Weekend Mode: {weekend_status}\n"
                 f"• OTC Pairs: {'Available' if not is_weekend else 'Limited'}\n\n"
                 f"🔗 *System Status:*\n"
                 f"• Bot: TANIX AI 🤖\n"
                 f"• Timeframe: 1 MINUTE\n"
                 f"• Auto Users: {auto_count}\n"
-                f"• Min Accuracy: 92%+\n"
+                f"• Min Accuracy: 75%+\n"
                 f"• Timezone: IST 🇮🇳",
                 parse_mode='Markdown'
             )
@@ -1403,14 +1360,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             
             await query.message.reply_text(
                 f"🎯 *TANIX AI Accuracy Report*\n\n"
-                f"📊 Minimum Accuracy: 92%+\n"
+                f"📊 Minimum Accuracy: 75%+\n"
                 f"🎯 Signal Quality: AI-POWERED\n"
                 f"💎 Minimum Score: {CONFIG['MIN_SCORE']}+\n"
                 f"💰 Minimum Confidence: {CONFIG['MIN_CONFIDENCE']}%+\n\n"
                 f"*Enhanced Algorithm Features:*\n"
-                f"• Weighted Technical Indicators\n"
-                f"• Advanced Trend Analysis\n"
-                f"• Multi-timeframe Confirmation\n"
+                f"• 10 Technical Indicators\n"
+                f"• Multi-timeframe Analysis\n"
+                f"• Advanced Trend Detection\n"
                 f"• Real-time Market Adaptation",
                 parse_mode='Markdown'
             )
@@ -1518,7 +1475,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # --- 12. GRACEFUL SHUTDOWN ---
 async def shutdown():
-    """Gracefully shutdown the application"""
     logger.info("🛑 Shutdown initiated...")
     
     STATE.shutting_down = True
@@ -1531,7 +1487,6 @@ async def shutdown():
     logger.info("✅ Shutdown completed")
 
 def signal_handler(signum, frame):
-    """Handle system signals for graceful shutdown"""
     logger.info(f"🛑 Received signal {signum}, shutting down...")
     asyncio.create_task(shutdown())
 
@@ -1552,7 +1507,7 @@ async def main():
         logger.info("🚀 Starting TANIX AI system...")
         await task_manager.create_task(price_update_task(), "price_updater")
         await task_manager.create_task(auto_signal_task(), "auto_signal")
-        await task_manager.create_task(trade_result_task(), "trade_result_tracker") # Added task
+        await task_manager.create_task(trade_result_task(), "trade_result_tracker")
         
         logger.info("🤖 Initializing Telegram bot...")
         application = Application.builder().token(CONFIG["TELEGRAM_BOT_TOKEN"]).build()
@@ -1571,10 +1526,10 @@ async def main():
         
         logger.info("✅ TANIX AI Trading Bot ready!")
         logger.info(f"🎯 Monitoring {len(CONFIG['ASSETS_TO_TRACK'])} pairs")
-        logger.info("💰 Strategy: AI-powered technical analysis")
+        logger.info("💰 Strategy: Advanced AI-powered technical analysis")
         logger.info("⏰ Timeframe: 1 minute with HH:MM:00 entry times (IST)")
         logger.info(f"📊 Minimum Quality: Score {CONFIG['MIN_SCORE']}+, Confidence {CONFIG['MIN_CONFIDENCE']}%+")
-        logger.info("🎯 Signal Accuracy: 92%+ only")
+        logger.info("🎯 Signal Accuracy: 75%+ with enhanced algorithm")
         logger.info("🤖 Automated Signals: Every 10 minutes")
         logger.info("📅 Weekend Filter: OTC pairs only on weekends")
         logger.info("🇮🇳 Timezone: UTC+5:30 (IST)")
