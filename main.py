@@ -31,7 +31,7 @@ nest_asyncio.apply()
 
 # --- 1. CONFIGURATION ---
 CONFIG = {
-    "TELEGRAM_BOT_TOKEN": "8034049017:AAGjBwA5dIqZfiUAIxYtu0FZoeugf1iU",
+    "TELEGRAM_BOT_TOKEN": "YOUR_BOT_TOKEN",
     "QUOTEX_EMAIL": "Quoto421@gmail.com",
     "QUOTEX_PASSWORD": "Quoto@123",
     "OTC_PAIRS": [
@@ -1811,4 +1811,5 @@ if __name__ == "__main__":
         logger.error(f"❌ Fatal error: {e}")
     finally:
         logger.info("👋 TANIX AI Trading Bot terminated")
+
 
